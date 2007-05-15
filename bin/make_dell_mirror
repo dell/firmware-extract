@@ -1,0 +1,66 @@
+#!/bin/bash
+
+function usage ()
+{
+    echo "usage: $0 [options]"
+    echo "  -m <directory>   mirror of ftp.dell.com"
+    exit 1
+}
+
+MIRROR_DIR=
+
+while getopts "m:d" Option
+do
+  case $Option in
+      m)
+        MIRROR_DIR=$OPTARG
+        ;;
+      d)
+        DEBUG=1
+        ;;
+      *) 
+        usage
+        ;;
+  esac
+done
+shift $(($OPTIND - 1))
+# Move argument pointer to next.
+
+if [ -z "$MIRROR_DIR" ]; then
+    echo "required param missing."
+    exit 1
+fi
+
+[ -e "$MIRROR_DIR" ] ||  mkdir -p $MIRROR_DIR
+
+echo "Start run: $(date)"
+
+set -e
+
+if [ -n "$DEBUG" ];then 
+    set -x
+fi
+
+if ! lockfile -2 -r 2 $MIRROR_DIR/runtime.lock; then
+	echo "Could not lock mirror output directory for exclusive access."
+	exit 1
+fi
+trap "rm -f $MIRROR_DIR/runtime.lock; trap '' HUP TERM QUIT INT EXIT" HUP TERM QUIT INT EXIT
+
+mkdir -p $MIRROR_DIR/ftp.dell.com
+pushd $MIRROR_DIR/ftp.dell.com
+exclude_list="-X *.iso -X *.ISO -X *.tar.gz -X *.tar -X *management_station* -X *.txt -X *.TXT"
+size_range="--size-range=100k-25M"
+options="--use-cache -n -p -e -v --parallel=5 $exclude_list $size_range"
+lftp -c "open ftp://ftp.dell.com; \
+    mirror $options bios ;\
+    mirror $options esm ;\
+    mirror $options scsi-raid ;\
+    mirror $options catalog ;\
+    mirror $options sysman ;\
+    mirror $options cmsdk ;\
+    mirror $options  dmi ;\
+    "
+popd
+
+echo "Run complete: $(date)"

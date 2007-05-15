@@ -1,0 +1,230 @@
+#!/usr/bin/python
+# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:
+
+  #############################################################################
+  #
+  # Copyright (c) 2005 Dell Computer Corporation
+  # Dual Licenced under GNU GPL and OSL
+  #
+  #############################################################################
+"""extract_hdr: 
+
+usage:
+    -h | --help         print this message
+*   -o | --output_dir   place to put extracted files. (creates output 
+                        dir structure here)
+    -i | --input_file   only extract one file (output to output_dir)
+    -d | --input_dir    extract all files in dir (recursively) 
+    -s | --systemid_conf specify config file of sysid <-> name mappings, to
+                        give friendly names to BIOS RPMS.
+    -t| --force_type   to build RPMs for firmwares apart from bios and raid
+
+-- Required parameters are denoted by an asterisk (*)
+
+"""
+
+from __future__ import generators
+
+version = "1.8"
+
+# import arranged alphabetically
+import ConfigParser
+import getopt
+import glob
+import os
+import sys
+import shutil
+import traceback
+import string
+import pycompat
+import extract_common
+
+import trace_decorator
+from trace_decorator import trace
+
+
+processFunctions = []
+handledExtensions = [ ]
+versionArray = []
+#modules = [ "extract_bios", "extract_bmc", "extract_lsi" ]
+modules = [ "extract_bios", "extract_lsi" ]
+
+unableToProcessStr = "UNPROCESSED: Version %s unable to process"
+
+@trace
+def extractHdr(ini, filename, outputDir):
+    ret = 0
+    global version
+
+    print "  attempt extract: %s" % filename,
+
+    global forceRebuild
+    if ini.has_option("processed_files", filename) and not forceRebuild:
+
+        procString = ini.get("processed_files", filename)
+
+        if procString == unableToProcessStr:
+            print "Version %s not able to process..." % version
+            sys.stdout.flush()
+            return ret
+
+        try:
+            if procString.startswith("PROCESSED(%s):" % version):
+                functName = procString.split(":")[1].strip()
+                functVer  = procString.split(":")[2].strip()
+                for n, f, v in processFunctions:
+                    if n == functName and v == functVer:
+                        print "Already processed by this version, skipping..."
+                        sys.stdout.flush()
+                        return 1
+        except IndexError:
+            pass
+
+    print
+    sys.stdout.flush()
+
+    handled = 0
+    ini.set("processed_files", filename, unableToProcessStr)
+    for i in handledExtensions:
+        if filename.lower().endswith(i):
+            handled = 1
+            break
+
+    if handled:
+        oldpwd = os.getcwd()
+        tempdir = pycompat.mktempdir()
+        try:
+            destFile = os.path.join(tempdir, os.path.basename(filename))
+            pycompat.copyFile(filename, destFile)
+            os.chdir(tempdir)
+            for name, function, functVersion in processFunctions:
+                try:
+                    ret = function(ini, filename, destFile, outputDir)
+                    if ret:
+                        ini.set("processed_files", filename, "PROCESSED(%s): %s:%s" % (version, name, functVersion))
+                        print "    good: %s" % name
+                        sys.stdout.flush()
+                        break
+                except extract_common.skip:
+                    pass
+                except KeyboardInterrupt:
+                    raise
+                except Exception:
+                    #traceback.print_exc()
+                    pass
+
+        finally:
+            os.chdir(oldpwd)
+            shutil.rmtree(tempdir)
+
+    syncIni(ini)
+
+    return ret
+
+forceRebuild = 0
+def main():
+    inputFiles=[]
+    outputDir=None
+    forceType=None
+    ini = None
+    extract_common.systemConfIni = ConfigParser.ConfigParser()
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hd:i:o:s:ft:v", [
+                "help", "input_file=", "output_dir=",
+                "systemid_conf=", "force", "input_dir=", "force_type="
+            ])
+        for option, argument in opts:
+            if option in ("-h", "--help"):
+                print __doc__
+                sys.exit(0)
+            if option in ("-o", "--output_dir"):
+                outputDir = argument
+            if option in ("-f", "--force"):
+                global forceRebuild
+                forceRebuild = 1
+            if option in ("-i", "--input_file"):
+                for f in glob.glob(os.path.realpath(argument)):
+                    inputFiles.append(os.path.realpath(f))
+            if option in ("-d", "--input_dir"):
+                for topdir, dirlist, filelist in pycompat.walkPath(os.path.realpath(argument)):
+                    filelist.sort()
+                    for file in filelist:
+                        inputFiles.append(os.path.join(topdir,file))
+            if option in ("-s", "--systemid_conf"):
+                print "reading config file: %s" % argument        
+                extract_common.systemConfIni.read(glob.glob(os.path.realpath(argument)))
+            if option in ("-t", "--force_type"):
+                forceType=str("%s" % argument)
+                modules.append("extract_%s" % forceType)
+            if option in ("-v", "--verbose"):
+                trace_decorator.debug["__main__"] = 9
+        
+        if outputDir is None: raise getopt.GetoptError("Need output dir", "")
+
+        global processFunctions, handledExtensions, versionArray, unableToProcessStr
+        for m in modules:
+            module = __import__(m, globals(), locals(), [])
+            processFunctions.extend(module.processFunctions)
+            handledExtensions.extend(module.handledExtensions)
+            versionArray.append( (m, module.version))
+
+        unableToProcessStr = unableToProcessStr % versionArray
+
+        outputDir = os.path.realpath(outputDir)
+        if not os.path.exists(outputDir):
+            os.makedirs(outputDir)
+
+        oldpwd = os.getcwd()
+        os.chdir(outputDir)
+
+        if not os.access("out", os.F_OK):
+            os.mkdir("out")
+
+        ini = ConfigParser.ConfigParser()
+        ini.read( os.path.join(outputDir, "out", "config.ini"))
+        if not ini.has_section("processed_files"):
+            ini.add_section("processed_files")
+
+        if not ini.has_section("out_files"):
+            ini.add_section("out_files")
+
+        if not ini.has_section("main"):
+            ini.add_section("main")
+
+        ini.set("main", "ini_path", os.path.join(outputDir, "out", "config.ini"))
+
+        inputFiles.sort()
+        for hdrFile in inputFiles:
+            try:
+                extractHdr(ini, hdrFile, os.path.join(outputDir, "out"))
+            except (IOError, OSError):
+                pass
+
+        os.chdir(oldpwd)
+
+    except (getopt.GetoptError):
+        # print help information and exit:
+        print __doc__
+        sys.exit(2)
+
+    except (KeyboardInterrupt):
+        print "Syncing INI file before Interrupt."
+        syncIni(ini)
+        try:
+            os.wait()
+        except OSError:
+            pass
+        sys.exit(3)
+
+    return 0 #shell logic
+
+def syncIni(ini):
+    path = ini.get("main", "ini_path")
+    fh = open(path, "w+")
+    ini.write(fh)
+    fh.close()
+
+
+if __name__ == "__main__":
+    sys.exit( main() )
