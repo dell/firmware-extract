@@ -15,7 +15,7 @@
 Summary:   pci Firmware upgrade package
 Name:      pci_firmware_%{full_pci_id}%{?limit_system_support:_for_system_%{limit_system_support}}
 Version:   %{dell_version}
-Release:   9%{?revision:.%{revision}}
+Release:   10%{?revision:.%{revision}}
 Vendor:    Dell
 License:   Proprietary
 Group:     System Environment/Base
