@@ -1,4 +1,5 @@
 #!/bin/bash
+# vim:et:ts=4:sw=4:tw=0
 
 function usage ()
 {
@@ -11,7 +12,7 @@ function usage ()
 MIRROR_DIR=
 OUTDIR=
 
-while getopts "o:m:d" Option
+while getopts "o:m:dt:" Option
 do
   case $Option in
       o)
@@ -23,6 +24,8 @@ do
       d)
         DEBUG=1
         ;;
+      t)
+        ADDITIONAL_TYPES="-t $OPTARG $ADDITIONAL_TYPES"
       *) 
         usage
         ;;
@@ -63,7 +66,7 @@ if [ -z "$NO_EXTRACT" ]; then
   echo "Extracting HDR files."
   mkdir -p $OUTDIR/SPECS
   cp -f /usr/share/firmware/spec/systemid.conf $OUTDIR/SPECS/systemid.conf
-  extract_hdr -d $MIRROR_DIR -o $OUTDIR -s $OUTDIR/SPECS/\*.conf
+  extract_hdr -d $MIRROR_DIR -o $OUTDIR -s $OUTDIR/SPECS/\*.conf $ADDITIONAL_TYPES
 fi
 
 
