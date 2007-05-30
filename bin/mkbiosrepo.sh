@@ -26,6 +26,7 @@ do
         ;;
       t)
         ADDITIONAL_TYPES="-t $OPTARG $ADDITIONAL_TYPES"
+        ;;
       *) 
         usage
         ;;
