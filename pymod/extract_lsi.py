@@ -40,7 +40,7 @@ def getSystemDependencies(packageXml):
  
 # note: this is tied a bit too closely to dell update package format.
 # should use tools to pull vers directly.
-def copyLsi(ini, originalSource, sourceDir, outputDir):
+def copyLsi(ini, wrapper, originalSource, sourceDir, outputDir):
     dom = xml.dom.minidom.parse("./package.xml")
     vendorVersion = HelperXml.getNodeAttribute(dom, "vendorVersion", "SoftwareComponent").lower()
     dellVersion   = HelperXml.getNodeAttribute(dom, "dellVersion", "SoftwareComponent").lower()
@@ -70,7 +70,7 @@ def copyLsi(ini, originalSource, sourceDir, outputDir):
         extract_common.setIni( packageIni, "package",
             spec      = "lsi",
             module    = "delllsi",
-            type      = "LsiPackageWrapper",
+            type      = wrapper,
             name      = depName,
             safe_name = fwShortName,
             pciId     = pciIdTuple,
@@ -128,7 +128,13 @@ def extractLsiRomFromLinuxDup(ini, originalSource, sourceFile, outputDir):
         raise extract_common.skip("not .bin")
 
     if os.path.isfile("./linflash.bin") and os.path.isfile("./package.xml"):
-        ret = copyLsi(ini, originalSource, os.getcwd(), outputDir)
+        ret = copyLsi(ini, "Perc4PackageWrapper", originalSource, os.getcwd(), outputDir)
+
+    if os.path.isfile("./perc5int") and os.path.isfile("./package.xml"):
+        ret = copyLsi(ini, "Perc5iPackageWrapper", originalSource, os.getcwd(), outputDir)
+
+    if os.path.isfile("./perc5") and os.path.isfile("./package.xml"):
+        ret = copyLsi(ini, "Perc5ePackageWrapper", originalSource, os.getcwd(), outputDir)
 
     return ret
 
