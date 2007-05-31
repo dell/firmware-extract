@@ -14,7 +14,7 @@ from __future__ import generators
 
 # Change this version # to cause all packages built with this module to be
 # rebuilt. 
-version = "1.9"
+version = "1.10"
 
 # import arranged alphabetically
 import glob
