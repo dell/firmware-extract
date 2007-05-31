@@ -21,7 +21,7 @@
 Summary:   BIOS upgrade package for System: %{system_shortname}
 Name:      system_bios_%{system_shortname}
 Version:   %{version}
-Release:   15%{?revision:.%{revision}}
+Release:   16%{?revision:.%{revision}}
 Vendor:    Dell
 License:   Proprietary
 Group:     System Environment/Base
@@ -58,10 +58,10 @@ If this package is useful to you, feedback is appreciated.
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
 	rm -rf $RPM_BUILD_ROOT
 fi
-mkdir -p $RPM_BUILD_ROOT/%{_datadir}/firmware/bios/%{safe_name}_version_%{version}/
-install -m 644 *.hdr       $RPM_BUILD_ROOT/%{_datadir}/firmware/bios/%{safe_name}_version_%{version}/ 
-install -m 644 package.ini $RPM_BUILD_ROOT/%{_datadir}/firmware/bios/%{safe_name}_version_%{version}/
-install -m 644 package.xml $RPM_BUILD_ROOT/%{_datadir}/firmware/bios/%{safe_name}_version_%{version}/ || true
+mkdir -p $RPM_BUILD_ROOT/%{_datadir}/firmware/dell/%{safe_name}_version_%{version}/
+install -m 644 *.hdr       $RPM_BUILD_ROOT/%{_datadir}/firmware/dell/%{safe_name}_version_%{version}/ 
+install -m 644 package.ini $RPM_BUILD_ROOT/%{_datadir}/firmware/dell/%{safe_name}_version_%{version}/
+install -m 644 package.xml $RPM_BUILD_ROOT/%{_datadir}/firmware/dell/%{safe_name}_version_%{version}/ || true
 
 
 %clean
@@ -72,7 +72,7 @@ fi
 %files
 %defattr(-,root,root)
 #%# doc dell-std-license.txt
-%{_datadir}/firmware/bios/
+%{_datadir}/firmware/dell/*
 
 %post
 update_firmware --rpm -y || true
