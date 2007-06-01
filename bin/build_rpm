@@ -33,10 +33,10 @@ import sys
 import ConfigParser
 import traceback
 
-import pycompat
-import HelperXml
-import biosHdr
-import repository
+import firmwaretools.pycompat  as pycompat
+import firmwaretools.HelperXml as HelperXml
+import firmwaretools.biosHdr   as biosHdr
+import firmwaretools.repository as repository
 
 class NonExistentSpecFile(Exception): pass
 class RpmBuildFailed(Exception): pass

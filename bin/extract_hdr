@@ -39,8 +39,8 @@ import string
 import pycompat
 import extract_common
 
-import trace_decorator
-from trace_decorator import trace
+import firmwaretools.trace_decorator as trace_decorator
+from firmwaretools.trace_decorator import trace
 
 
 processFunctions = []
