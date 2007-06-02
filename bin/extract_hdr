@@ -41,7 +41,8 @@ import firmwaretools.pycompat as pycompat
 import firmwaretools.extract_common as extract_common
 import firmwaretools.trace_decorator as trace_decorator
 from firmwaretools.trace_decorator import trace
-
+import firmwaretools
+sys.path.append(firmwaretools.__path__[0])
 
 processFunctions = []
 handledExtensions = [ ]
