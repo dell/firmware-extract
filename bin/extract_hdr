@@ -36,9 +36,9 @@ import sys
 import shutil
 import traceback
 import string
-import pycompat
-import extract_common
 
+import firmwaretools.pycompat as pycompat
+import firmwaretools.extract_common as extract_common
 import firmwaretools.trace_decorator as trace_decorator
 from firmwaretools.trace_decorator import trace
 
