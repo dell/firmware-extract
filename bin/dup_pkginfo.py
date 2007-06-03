@@ -7,7 +7,7 @@ import getopt
 import sys
 import xml.dom.minidom
 
-import HelperXml
+import firmwaretools.HelperXml as HelperXml
 
 class PackageXml:
     def __init__(self, packageXmlFilename):

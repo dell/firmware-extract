@@ -12,7 +12,22 @@
 import distutils.core 
 import glob
 import os
-execfile("version.mk")
+
+###################################################################
+#
+# WARNING
+#
+# These are all automatically replaced by the release script.
+# START = Do not edit manually
+RELEASE_MAJOR="1"
+RELEASE_MINOR="1"
+RELEASE_SUBLEVEL="3"
+RELEASE_EXTRALEVEL=""
+#
+# END = Do not edit manually
+#
+###################################################################
+
 
 # override from makefile environment vars, if necessary
 for i in ("RELEASE_MAJOR", "RELEASE_MINOR", "RELEASE_SUBLEVEL", "RELEASE_EXTRALEVEL",):
@@ -37,6 +52,8 @@ for i in glob.glob("spec/*"):
     MANIFEST.write("include %s\n" % i )
 
 MANIFEST.write("include version.mk\n" )
+MANIFEST.write("include Makefile\n" )
+MANIFEST.write("include pkg/dell-repo-tools.spec\n" )
 MANIFEST.write( "#END AUTOGEN\n" )
 MANIFEST.close()
 
@@ -53,8 +70,16 @@ distutils.core.setup (
         author_email="firmware-tools-devel@lists.us.dell.com",
         url="http://linux.dell.com/firmware-tools/",
 
-        package_dir={'': 'pymod'},
-        packages=[''],
+        package_dir={'firmwaretools': 'pymod'},
+        py_modules=[
+'firmwaretools.decorator',
+'firmwaretools.extract_bios_blacklist',
+'firmwaretools.extract_bios',
+'firmwaretools.extract_bmc',
+'firmwaretools.extract_common',
+'firmwaretools.extract_esm',
+'firmwaretools.extract_lsi',
+'firmwaretools.trace_decorator',],
 
         ext_modules = [ ],
         data_files=dataFileList,
