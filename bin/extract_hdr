@@ -63,7 +63,7 @@ def extractHdr(ini, filename, outputDir, numFiles, thisNum):
     ret = 0
     global version
     global forceRebuild
-    outPrefix = "%s/%s %s File: %s" % (thisNum, numFiles, os.getpid(), filename)
+    outPrefix = "%04i/%04i %s File: %s" % (thisNum, numFiles, os.getpid(), filename)
 
     if ini.has_option("processed_files", filename) and not forceRebuild:
 
