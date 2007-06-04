@@ -59,16 +59,18 @@ modules = [ "extract_bios", "extract_bmc", "extract_lsi" ]
 unableToProcessStr = "UNPROCESSED: Version %s unable to process"
 
 @trace
-def extractHdr(ini, filename, outputDir):
+def extractHdr(ini, filename, outputDir, numFiles, thisNum):
     ret = 0
     global version
     global forceRebuild
+    outPrefix = "%s/%s %s File: %s" % (thisNum, numFiles, os.getpid(), filename)
+
     if ini.has_option("processed_files", filename) and not forceRebuild:
 
         procString = ini.get("processed_files", filename)
 
         if procString == unableToProcessStr:
-            print "File(%s) %s Version %s not able to process..." % (os.getpid(), filename,version)
+            print "%s Version %s not able to process..." % (outPrefix, filename,version)
             sys.stdout.flush()
             return ret
 
@@ -78,7 +80,7 @@ def extractHdr(ini, filename, outputDir):
                 functVer  = procString.split(":")[2].strip()
                 for n, f, v in processFunctions:
                     if n == functName and v == functVer:
-                        print "File(%s) %s Already processed by this version, skipping..." % (os.getpid(), filename)
+                        print "%s Already processed by this version, skipping..." % outPrefix
                         sys.stdout.flush()
                         return 1
         except IndexError:
@@ -119,9 +121,9 @@ def extractHdr(ini, filename, outputDir):
             shutil.rmtree(tempdir)
 
     if nameOfHandler is not None:
-        print "File(%s) %s good: %s" % (os.getpid(), filename, nameOfHandler)
+        print "%s good: %s" % (outPrefix, nameOfHandler)
     else:
-        print "File(%s) %s: unable to process " % (os.getpid(), filename)
+        print "%s: unable to process " % outPrefix
         ini.set("processed_files", filename, unableToProcessStr)
 
     sys.stdout.flush()
@@ -222,7 +224,9 @@ def main():
 
         children=[]
         inputFiles.sort()
-        for hdrFile in inputFiles:
+        numInputFiles = len(inputFiles)
+        for index in xrange(numInputFiles):
+            hdrFile = inputFiles[index]
             # only let configured number of children at once
             while len(children) > numProcesses:
                 child, status = os.waitpid(0,0)
@@ -243,7 +247,7 @@ def main():
                             os.close(i)
                         except OSError:
                             pass
-                    extractHdr(ini, hdrFile, outputDir)
+                    extractHdr(ini, hdrFile, outputDir, thisNum=index, numFiles=numInputFiles)
                 except (KeyboardInterrupt):
                     os._exit(0)
                 except (Exception), e:
