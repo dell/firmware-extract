@@ -85,7 +85,6 @@ def extractHdr(ini, filename, outputDir):
             pass
 
     handled = 0
-    ini.set("processed_files", filename, unableToProcessStr)
     for i in handledExtensions:
         if filename.lower().endswith(i):
             handled = 1
@@ -116,12 +115,14 @@ def extractHdr(ini, filename, outputDir):
 
         finally:
             os.chdir(oldpwd)
+            os.system("chmod -R u+rw %s" % tempdir)
             shutil.rmtree(tempdir)
 
     if nameOfHandler is not None:
         print "File(%s) %s good: %s" % (os.getpid(), filename, nameOfHandler)
     else:
         print "File(%s) %s: unable to process " % (os.getpid(), filename)
+        ini.set("processed_files", filename, unableToProcessStr)
 
     sys.stdout.flush()
     return ret
@@ -135,7 +136,7 @@ def main():
     ini = None
     extract_common.systemConfIni = ConfigParser.ConfigParser()
 
-    threadlist = []
+    iniThread = None
     numProcesses = 30
 
     try:
@@ -202,11 +203,11 @@ def main():
             ini.add_section("main")
 
         port = 8000
-        threadlist.append(firmwaretools.ini_thread_proxy.XmlRpcThread(threadNumber=0, port=port, iniPath=os.path.join(outputDir, "out", "config.ini"), ini=ini))
+        iniThread = firmwaretools.ini_thread_proxy.XmlRpcThread(threadNumber=0, port=port, iniPath=os.path.join(outputDir, "out", "config.ini"), ini=ini)
         ini = xmlrpclib.Server('http://localhost:%s' % port)
 
         start = time.time()
-        while not threadlist[0].running:
+        while not iniThread.running:
             time.sleep(0.1)
             if (time.time() - start > 2):
                 print "timeout waiting for config parser to startup"
@@ -222,16 +223,21 @@ def main():
         children=[]
         inputFiles.sort()
         for hdrFile in inputFiles:
-            threadlist[0].sync()
+            # only let configured number of children at once
             while len(children) > numProcesses:
                 child, status = os.waitpid(0,0)
                 children.remove(child)
+
+            # one of the children had to have finished, so sync the config file
+            iniThread.sync()
                 
             pid = os.fork()
             if pid: # parent
                 children.append(pid)
             else: #child
                 try:
+                    # make sure we close inherited filehandles
+                    # or we could hold open sockets, etc.
                     for i in xrange(3,255): 
                         try:
                             os.close(i)
@@ -246,6 +252,17 @@ def main():
 
                 os._exit(0)
 
+        #wait for everybody to finish up.
+        iniThread.sync()
+        while len(children):
+            child, status = os.waitpid(0,0)
+            iniThread.sync()
+            children.remove(child)
+
+        iniThread.sync()
+        ini.kill()
+        print "Finished in %s seconds" % (time.time() - start)
+
     except (getopt.GetoptError):
         # print help information and exit:
         print __doc__
@@ -253,11 +270,9 @@ def main():
 
     except (KeyboardInterrupt):
         try:
-            print "Syncing INI file before Interrupt."
-            ini.sync()
             print "kill ini thread."
             ini.kill()
-            print "wait"
+            print "wait for all children to finish"
             os.wait()
         except:
             import traceback
@@ -265,9 +280,8 @@ def main():
             
         sys.exit(3)
 
-    except:
-        for t in threadlist:
-            t.kill()
+    except Exception:
+        ini.kill()
 
     return 0 #shell logic
 
