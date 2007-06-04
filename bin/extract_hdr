@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:
+# vim:tw=0:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:
 
   #############################################################################
   #
@@ -25,18 +25,24 @@ usage:
 
 from __future__ import generators
 
-version = "1.8"
+version = "1.9"
 
 # import arranged alphabetically
 import ConfigParser
+import fcntl
 import getopt
 import glob
 import os
+import Queue
 import sys
 import shutil
 import traceback
 import string
+from threading import Thread
+import time
+import xmlrpclib
 
+import firmwaretools.ini_thread_proxy
 import firmwaretools.pycompat as pycompat
 import firmwaretools.extract_common as extract_common
 import firmwaretools.trace_decorator as trace_decorator
@@ -47,8 +53,8 @@ sys.path.append(firmwaretools.__path__[0])
 processFunctions = []
 handledExtensions = [ ]
 versionArray = []
-#modules = [ "extract_bios", "extract_bmc", "extract_lsi" ]
-modules = [ "extract_bios", "extract_lsi" ]
+modules = [ "extract_bios", "extract_bmc", "extract_lsi" ]
+#modules = [ "extract_bios", "extract_lsi" ]
 
 unableToProcessStr = "UNPROCESSED: Version %s unable to process"
 
@@ -56,16 +62,13 @@ unableToProcessStr = "UNPROCESSED: Version %s unable to process"
 def extractHdr(ini, filename, outputDir):
     ret = 0
     global version
-
-    print "  attempt extract: %s" % filename,
-
     global forceRebuild
     if ini.has_option("processed_files", filename) and not forceRebuild:
 
         procString = ini.get("processed_files", filename)
 
         if procString == unableToProcessStr:
-            print "Version %s not able to process..." % version
+            print "File(%s) %s Version %s not able to process..." % (os.getpid(), filename,version)
             sys.stdout.flush()
             return ret
 
@@ -75,14 +78,11 @@ def extractHdr(ini, filename, outputDir):
                 functVer  = procString.split(":")[2].strip()
                 for n, f, v in processFunctions:
                     if n == functName and v == functVer:
-                        print "Already processed by this version, skipping..."
+                        print "File(%s) %s Already processed by this version, skipping..." % (os.getpid(), filename)
                         sys.stdout.flush()
                         return 1
         except IndexError:
             pass
-
-    print
-    sys.stdout.flush()
 
     handled = 0
     ini.set("processed_files", filename, unableToProcessStr)
@@ -91,6 +91,7 @@ def extractHdr(ini, filename, outputDir):
             handled = 1
             break
 
+    nameOfHandler = None
     if handled:
         oldpwd = os.getcwd()
         tempdir = pycompat.mktempdir()
@@ -103,8 +104,7 @@ def extractHdr(ini, filename, outputDir):
                     ret = function(ini, filename, destFile, outputDir)
                     if ret:
                         ini.set("processed_files", filename, "PROCESSED(%s): %s:%s" % (version, name, functVersion))
-                        print "    good: %s" % name
-                        sys.stdout.flush()
+                        nameOfHandler = name
                         break
                 except extract_common.skip:
                     pass
@@ -118,22 +118,31 @@ def extractHdr(ini, filename, outputDir):
             os.chdir(oldpwd)
             shutil.rmtree(tempdir)
 
-    syncIni(ini)
+    if nameOfHandler is not None:
+        print "File(%s) %s good: %s" % (os.getpid(), filename, nameOfHandler)
+    else:
+        print "File(%s) %s: unable to process " % (os.getpid(), filename)
 
+    sys.stdout.flush()
     return ret
 
 forceRebuild = 0
 def main():
+    inputDir=[]
     inputFiles=[]
     outputDir=None
     forceType=None
     ini = None
     extract_common.systemConfIni = ConfigParser.ConfigParser()
 
+    threadlist = []
+    numProcesses = 30
+
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hd:i:o:s:ft:v", [
+        opts, args = getopt.getopt(sys.argv[1:], "hd:i:o:s:ft:vp:", [
                 "help", "input_file=", "output_dir=",
-                "systemid_conf=", "force", "input_dir=", "force_type="
+                "systemid_conf=", "force", "input_dir=", "force_type=",
+                "parallel=",
             ])
         for option, argument in opts:
             if option in ("-h", "--help"):
@@ -141,6 +150,8 @@ def main():
                 sys.exit(0)
             if option in ("-o", "--output_dir"):
                 outputDir = argument
+            if option in ("-p", "--parallel"):
+                numProcesses = argument
             if option in ("-f", "--force"):
                 global forceRebuild
                 forceRebuild = 1
@@ -148,10 +159,7 @@ def main():
                 for f in glob.glob(os.path.realpath(argument)):
                     inputFiles.append(os.path.realpath(f))
             if option in ("-d", "--input_dir"):
-                for topdir, dirlist, filelist in pycompat.walkPath(os.path.realpath(argument)):
-                    filelist.sort()
-                    for file in filelist:
-                        inputFiles.append(os.path.join(topdir,file))
+                inputDir.append(argument)
             if option in ("-s", "--systemid_conf"):
                 print "reading config file: %s" % argument        
                 extract_common.systemConfIni.read(glob.glob(os.path.realpath(argument)))
@@ -193,16 +201,50 @@ def main():
         if not ini.has_section("main"):
             ini.add_section("main")
 
-        ini.set("main", "ini_path", os.path.join(outputDir, "out", "config.ini"))
+        port = 8000
+        threadlist.append(firmwaretools.ini_thread_proxy.XmlRpcThread(threadNumber=0, port=port, iniPath=os.path.join(outputDir, "out", "config.ini"), ini=ini))
+        ini = xmlrpclib.Server('http://localhost:%s' % port)
 
+        start = time.time()
+        while not threadlist[0].running:
+            time.sleep(0.1)
+            if (time.time() - start > 2):
+                print "timeout waiting for config parser to startup"
+                raise KeyboardInterrupt()
+
+        for argument in inputDir:
+            print "walking input directories"
+            for topdir, dirlist, filelist in pycompat.walkPath(os.path.realpath(argument)):
+                filelist.sort()
+                for file in filelist:
+                    inputFiles.append(os.path.join(topdir,file))
+
+        children=[]
         inputFiles.sort()
         for hdrFile in inputFiles:
-            try:
-                extractHdr(ini, hdrFile, os.path.join(outputDir, "out"))
-            except (IOError, OSError):
-                pass
+            threadlist[0].sync()
+            while len(children) > numProcesses:
+                child, status = os.waitpid(0,0)
+                children.remove(child)
+                
+            pid = os.fork()
+            if pid: # parent
+                children.append(pid)
+            else: #child
+                try:
+                    for i in xrange(3,255): 
+                        try:
+                            os.close(i)
+                        except OSError:
+                            pass
+                    extractHdr(ini, hdrFile, outputDir)
+                except (KeyboardInterrupt):
+                    os._exit(0)
+                except (Exception), e:
+                    import traceback
+                    traceback.print_exc()
 
-        os.chdir(oldpwd)
+                os._exit(0)
 
     except (getopt.GetoptError):
         # print help information and exit:
@@ -210,22 +252,24 @@ def main():
         sys.exit(2)
 
     except (KeyboardInterrupt):
-        print "Syncing INI file before Interrupt."
-        syncIni(ini)
         try:
+            print "Syncing INI file before Interrupt."
+            ini.sync()
+            print "kill ini thread."
+            ini.kill()
+            print "wait"
             os.wait()
-        except OSError:
-            pass
+        except:
+            import traceback
+            traceback.print_exc()
+            
         sys.exit(3)
 
+    except:
+        for t in threadlist:
+            t.kill()
+
     return 0 #shell logic
-
-def syncIni(ini):
-    path = ini.get("main", "ini_path")
-    fh = open(path, "w+")
-    ini.write(fh)
-    fh.close()
-
 
 if __name__ == "__main__":
     sys.exit( main() )
