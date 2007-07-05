@@ -79,7 +79,9 @@ distutils.core.setup (
 'firmwaretools.extract_common',
 'firmwaretools.extract_esm',
 'firmwaretools.extract_lsi',
-'firmwaretools.trace_decorator',],
+'firmwaretools.trace_decorator',
+'firmwaretools.ini_thread_proxy',
+],
 
         ext_modules = [ ],
         data_files=dataFileList,
