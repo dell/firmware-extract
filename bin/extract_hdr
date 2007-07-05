@@ -70,7 +70,7 @@ def extractHdr(ini, filename, outputDir, numFiles, thisNum):
         procString = ini.get("processed_files", filename)
 
         if procString == unableToProcessStr:
-            print "%s Version %s not able to process..." % (outPrefix, filename,version)
+            print "%s Version %s not able to process..." % (outPrefix, version)
             sys.stdout.flush()
             return ret
 
