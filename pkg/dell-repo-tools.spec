@@ -8,7 +8,7 @@
 %define minor 1
 %define sub 3
 %define extralevel %{nil}
-%define rpm_release 1
+%define rpm_release 3
 %define release_name dell-repo-tools
 %define release_version %{major}.%{minor}.%{sub}%{extralevel}
 #
