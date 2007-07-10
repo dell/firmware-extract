@@ -235,6 +235,8 @@ def main():
             # one of the children had to have finished, so sync the config file
             iniThread.sync()
                 
+            sys.stdout.flush()
+            sys.stderr.flush()
             pid = os.fork()
             if pid: # parent
                 children.append(pid)
@@ -253,6 +255,8 @@ def main():
                 except (Exception), e:
                     import traceback
                     traceback.print_exc()
+                except: 
+                    pass
 
                 os._exit(0)
 
