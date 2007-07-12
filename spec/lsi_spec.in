@@ -15,7 +15,7 @@
 Summary:   pci Firmware upgrade package
 Name:      pci_firmware_%{full_pci_id}%{?limit_system_support:_for_system_%{limit_system_support}}
 Version:   %{dell_version}
-Release:   11%{?revision:.%{revision}}
+Release:   12%{?revision:.%{revision}}
 Vendor:    Dell
 License:   Proprietary
 Group:     System Environment/Base
@@ -69,8 +69,4 @@ fi
 #%# doc dell-std-license.txt
 %{_datadir}/firmware/lsi/%{?limit_system_support:system_%{limit_system_support}/}*
 
-%post
-update_firmware --rpm -y || true
-
-exit 0
-
+%posttrans -p update_firmware --rpm -y

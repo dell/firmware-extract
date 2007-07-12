@@ -74,8 +74,4 @@ fi
 #%# doc dell-std-license.txt
 %{_datadir}/firmware/dell/*
 
-%post
-update_firmware --rpm -y || true
-
-exit 0
-
+%posttrans -p update_firmware --rpm -y
