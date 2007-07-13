@@ -67,4 +67,4 @@ fi
 #%# doc dell-std-license.txt
 %{_datadir}/firmware/lsi/%{?limit_system_support:system_%{limit_system_support}/}*
 
-%posttrans -p update_firmware --rpm -y
+%posttrans -p /usr/bin/update_firmware --rpm -y

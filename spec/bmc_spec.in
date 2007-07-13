@@ -75,4 +75,4 @@ fi
 #%# doc dell-std-license.txt
 %{_datadir}/firmware/bmc/
 
-%posttrans -p update_firmware --rpm -y
+%posttrans -p /usr/bin/update_firmware --rpm -y
