@@ -45,6 +45,7 @@ fi
 echo "Start run: $(date)"
 
 set -e
+umask 002
 
 if [ -n "$DEBUG" ];then 
     set -x
@@ -67,7 +68,7 @@ if [ -z "$NO_EXTRACT" ]; then
   echo "Extracting HDR files."
   mkdir -p $OUTDIR/SPECS
   cp -f /usr/share/firmware/spec/systemid.conf $OUTDIR/SPECS/systemid.conf
-  extract_hdr -d $MIRROR_DIR -o $OUTDIR -s $OUTDIR/SPECS/\*.conf $ADDITIONAL_TYPES
+  extract_hdr -d $MIRROR_DIR -o $OUTDIR/out -s $OUTDIR/SPECS/\*.conf $ADDITIONAL_TYPES
 fi
 
 
