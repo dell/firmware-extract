@@ -74,4 +74,8 @@ fi
 #%# doc dell-std-license.txt
 %{_datadir}/firmware/dell/*
 
-%posttrans -p /usr/bin/update_firmware --rpm -y
+%posttrans 
+# only attempt to update after we have gotten to the end of the
+# transaction and all the requisite rpms have been installed. we might
+# have deps on other rpms.
+/usr/bin/update_firmware --rpm -y
