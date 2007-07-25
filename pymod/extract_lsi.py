@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:
+# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:textwidth=0:
 
   #############################################################################
   #
@@ -24,7 +24,7 @@ import xml.dom.minidom
 
 import pycompat
 import HelperXml
-import extract_common
+import firmwaretools.extract_common
 
 DELL_VEN_ID = 0x1028
 
@@ -61,13 +61,13 @@ def copyLsi(ini, wrapper, originalSource, sourceDir, outputDir):
 
         fwFullName = ("%s_version_%s" % (fwShortName,dellVersion)).lower()
        
-        extract_common.appendIniArray(ini, "out_files", fwFullName, originalSource)
+        firmwaretools.extract_common.appendIniArray(ini, "out_files", fwFullName, originalSource)
 
         # here we put 'version' as vendorVersion because the inventory tool can
         # only get vendor version, not dell version
         packageIni = ConfigParser.ConfigParser()
         packageIni.add_section("package")
-        extract_common.setIni( packageIni, "package",
+        firmwaretools.extract_common.setIni( packageIni, "package",
             spec      = "lsi",
             module    = "delllsi",
             type      = wrapper,
@@ -101,7 +101,7 @@ def copyLsi(ini, wrapper, originalSource, sourceDir, outputDir):
             paths.append((None, os.path.join(outputDir, fwFullName)))
 
         for sysId, dest in paths:
-            extract_common.safemkdir( dest )
+            firmwaretools.extract_common.safemkdir( dest )
     
             for f in glob.glob("*.[rR][oO][mM]"):
                 pycompat.copyFile( f, os.path.join(dest, f))
@@ -122,10 +122,10 @@ def copyLsi(ini, wrapper, originalSource, sourceDir, outputDir):
     return 1
 
 # can skip DUP --extract command due to ordering. Should already be extracted.
-def extractLsiRomFromLinuxDup(ini, originalSource, sourceFile, outputDir):
+def extractLsiRomFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".bin"):
-        raise extract_common.skip("not .bin")
+        raise firmwaretools.extract_common.skip("not .bin")
 
     if os.path.isfile("./linflash.bin") and os.path.isfile("./package.xml"):
         ret = copyLsi(ini, "Perc4PackageWrapper", originalSource, os.getcwd(), outputDir)
@@ -139,11 +139,11 @@ def extractLsiRomFromLinuxDup(ini, originalSource, sourceFile, outputDir):
     return ret
 
 #can skip DUP --extract command due to ordering. Should already be extracted.
-def extractLsiRomFromWindowsDup(ini, originalSource, sourceFile, outputDir):
+def extractLsiRomFromWindowsDup(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     
     if not sourceFile.lower().endswith(".exe"):
-        raise extract_common.skip("not .exe")
+        raise firmwaretools.extract_common.skip("not .exe")
 
     if os.path.isfile("./NTFlash.exe") and os.path.isfile("./package.xml"):
         ret = copyLsi(ini, originalSource, os.getcwd(), outputDir)
@@ -152,10 +152,8 @@ def extractLsiRomFromWindowsDup(ini, originalSource, sourceFile, outputDir):
 
 # some installshield executables crash wine, so do them first.
 processFunctions = [
-    ("extractLsiRomFromLinuxDup", extractLsiRomFromLinuxDup, version),
-    ("extractLsiRomFromWindowsDup", extractLsiRomFromWindowsDup, version),
+    {"extension": ".bin", "version": version, "functionName": "extractLsiRomFromLinuxDup"},
+    {"extension": ".exe", "version": version, "functionName": "extractLsiRomFromWindowsDup"},
     ]
 
-# convert to lowercase
-handledExtensions = ( ".bin", ".exe")
 

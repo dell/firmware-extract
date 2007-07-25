@@ -1,5 +1,5 @@
 #!/usr/bin/python2
-# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:
+# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:textwidth=0:
 
 import inspect
 import sys
@@ -44,7 +44,7 @@ def trace(f, *args, **kw):
     msgLevel=9
     dprint("ENTER: %s(%s, %s)\n" % (f.func_name, args, kw), msgLevel=msgLevel, outLevel=outLevel)
     try:
-        result = "NON-EXCEPTION DERIVED EXCEPTION RAISED"
+        result = "Bad exception raised: Exception was not a derived class of 'Exception'"
         try:
             result = f(*args, **kw)
         except Exception, e:

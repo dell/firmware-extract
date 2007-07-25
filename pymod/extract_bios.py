@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:
+# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:textwidth=0:
 
   #############################################################################
   #
@@ -27,9 +27,9 @@ import xml.dom.minidom
 import pycompat
 import HelperXml
 import biosHdr
-import extract_common
+import firmwaretools.extract_common
 from extract_bios_blacklist import dell_system_id_blacklist
-from trace_decorator import trace, dprint, setModule
+from trace_decorator import trace, dprint, setModule, debug
 
 dosre = re.compile(r"This program cannot be run in DOS mode")
 
@@ -64,16 +64,16 @@ def copyHdr(ini, originalSource, hdrFile, outputDir):
         systemName = ("system_bios_ven_0x1028_dev_0x%04x" % id).lower()
         biosName = ("%s_version_%s" % (systemName, ver)).lower()
         dest = os.path.join(outputDir, biosName)
-        extract_common.safemkdir(dest)
+        firmwaretools.extract_common.safemkdir(dest)
 
         pycompat.copyFile( hdrFile, "%s/bios.hdr" % (dest))
         pycompat.copyFile( os.path.join(os.path.dirname(hdrFile), "package.xml"), "%s/package.xml" % (dest), ignoreException=1)
 
-        extract_common.appendIniArray(ini, "out_files", biosName, originalSource)
+        firmwaretools.extract_common.appendIniArray(ini, "out_files", biosName, originalSource)
 
         deps = {}
         # these are (int, str) tuple
-        for sysId, reqver in extract_common.getBiosDependencies( os.path.join(dest,"package.xml")):
+        for sysId, reqver in firmwaretools.extract_common.getBiosDependencies( os.path.join(dest,"package.xml")):
             deps[sysId] = reqver
 
         #setup deps
@@ -87,7 +87,7 @@ def copyHdr(ini, originalSource, hdrFile, outputDir):
         if not packageIni.has_section("package"):
             packageIni.add_section("package")
 
-        extract_common.setIni( packageIni, "package",
+        firmwaretools.extract_common.setIni( packageIni, "package",
             spec      = "bios",
             module    = "dellbios",
             type      = "BiosPackageWrapper",
@@ -104,7 +104,7 @@ def copyHdr(ini, originalSource, hdrFile, outputDir):
 
             force_pkg_regen = 1,
             extract_ver = version,
-            shortname = extract_common.getShortname("0x1028", "0x%04x" % id))
+            shortname = firmwaretools.extract_common.getShortname("0x1028", "0x%04x" % id))
 
         fd = None
         try:
@@ -123,7 +123,7 @@ def copyHdr(ini, originalSource, hdrFile, outputDir):
 copyHdr = trace(copyHdr)
 
 #@trace
-def alreadyHdr(ini, originalSource, sourceFile, outputDir):
+def alreadyHdr(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if sourceFile.lower().endswith(".hdr"):
         ret = copyHdr(ini, originalSource, sourceFile, outputDir)
@@ -132,10 +132,10 @@ def alreadyHdr(ini, originalSource, sourceFile, outputDir):
 alreadyHdr = trace(alreadyHdr)
 
 #@trace
-def extractHdrFromLinuxDup(ini, originalSource, sourceFile, outputDir):
+def extractHdrFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".bin"):
-        raise extract_common.skip("not .bin")
+        raise firmwaretools.extract_common.skip("not .bin")
 
     pycompat.executeCommand("""LANG=C perl -p -i -e 's/.*\$_ROOT_UID.*/true ||/; s/grep -an/grep -m1 -an/; s/tail \+/tail -n \+/' %s""" % sourceFile)
     pycompat.executeCommand("""sh %s --extract ./ > /dev/null 2>&1""" % (sourceFile))
@@ -148,20 +148,20 @@ def extractHdrFromLinuxDup(ini, originalSource, sourceFile, outputDir):
 extractHdrFromLinuxDup = trace(extractHdrFromLinuxDup)
 
 #@trace
-def extractHdrFromDcopyExe(ini, originalSource, sourceFile, outputDir):
+def extractHdrFromDcopyExe(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if sourceFile.lower().endswith(".exe"):
-        pycompat.executeCommand("WORKINGDIR=$(dirname %s) extract_hdr_helper.sh %s bios.hdr > /dev/null 2>&1" % (sourceFile, sourceFile), timeout=45)
+        pycompat.executeCommand("WORKINGDIR=$(dirname %s) extract_hdr_helper.sh %s bios.hdr > /dev/null 2>&1" % (sourceFile, sourceFile), timeout=75)
         ret = copyHdr(ini, originalSource, "bios.hdr", outputDir)
     return ret
 
 extractHdrFromDcopyExe = trace(extractHdrFromDcopyExe)
 
 #@trace
-def extractHdrFromWindowsDupOrInstallShield(ini, originalSource, sourceFile, outputDir):
+def extractHdrFromWindowsDupOrInstallShield(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".exe") or canRunInDos(sourceFile):
-        raise extract_common.skip()
+        raise firmwaretools.extract_common.skip()
 
     # no way to detect this ahead of time, as python zipfile module 
     # doesn't recognize windows dup packages as zips.
@@ -186,14 +186,14 @@ def extractHdrFromWindowsDupOrInstallShield(ini, originalSource, sourceFile, out
 extractHdrFromWindowsDupOrInstallShield = trace(extractHdrFromWindowsDupOrInstallShield)
 
 #@trace
-def extractHdrFromPrecisionWindowsExe(ini, originalSource, sourceFile, outputDir):
+def extractHdrFromPrecisionWindowsExe(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".exe"):
-        raise extract_common.skip()
+        raise firmwaretools.extract_common.skip()
 
     pycompat.executeCommand("wineserver -k > /dev/null 2>&1")
     pycompat.executeCommand("wineserver -p0 > /dev/null 2>&1")
-    pycompat.executeCommand("DISPLAY= wine %s -writehdrfile -nopause >/dev/null 2>&1" % os.path.basename(sourceFile), timeout=45)
+    pycompat.executeCommand("DISPLAY= wine %s -writehdrfile -nopause >/dev/null 2>&1" % os.path.basename(sourceFile), timeout=75)
 
     hdrFileList = glob.glob("*.[hH][dD][rR]")
     for i in hdrFileList:
@@ -206,14 +206,13 @@ def extractHdrFromPrecisionWindowsExe(ini, originalSource, sourceFile, outputDir
 
 extractHdrFromPrecisionWindowsExe = trace(extractHdrFromPrecisionWindowsExe)
 
-processFunctions = [
-    ("alreadyHdr", alreadyHdr, version),
-    ("extractHdrFromLinuxDup", extractHdrFromLinuxDup, version),
-    ("extractHdrFromWindowsDupOrInstallShield", extractHdrFromWindowsDupOrInstallShield, version),
-    ("extractHdrFromPrecisionWindowsExe", extractHdrFromPrecisionWindowsExe, version),
-    ("extractHdrFromDcopyExe", extractHdrFromDcopyExe, version),
-    ]
 
-# convert to lowercase
-handledExtensions = [ ".exe", ".bin", ".hdr" ]
+
+processFunctions = (
+    {"extension": ".hdr", "version": version, "functionName": "alreadyHdr"},
+    {"extension": ".bin", "version": version, "functionName": "extractHdrFromLinuxDup"},
+    {"extension": ".exe", "version": version, "functionName": "extractHdrFromWindowsDupOrInstallShield"},
+    {"extension": ".exe", "version": version, "functionName": "extractHdrFromPrecisionWindowsExe"},
+    {"extension": ".exe", "version": version, "functionName": "extractHdrFromDcopyExe"},
+    )
 

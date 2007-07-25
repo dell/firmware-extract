@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:
+# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:textwidth=0:
 
   #############################################################################
   #
@@ -21,7 +21,7 @@ import xml.dom.minidom
 
 import pycompat
 import HelperXml
-import extract_common
+import firmwaretools.extract_common
 
 # note: this is tied a bit too closely to dell update package format.
 # should use tools to pull vers directly.
@@ -35,17 +35,17 @@ def copyBmc(ini, originalSource, sourceDir, outputDir):
         fwShortName = ("bmc_firmware_ven_0x1028_dev_0x%04x" % id).lower()
         fwFullName = ("%s_version_%s" % (fwShortName,dellVersion)).lower()
         dest = os.path.join(outputDir, fwFullName)
-        extract_common.safemkdir( dest )
+        firmwaretools.extract_common.safemkdir( dest )
 
         pycompat.copyFile( "bmcflsh.dat", os.path.join(dest, "bmcflsh.dat"))
         pycompat.copyFile( "bmccfg.def", os.path.join(dest, "bmccfg.def"))
         pycompat.copyFile( "package.xml", os.path.join(dest, "package.xml"))
 
-        extract_common.appendIniArray(ini, "out_files", fwFullName, originalSource)
+        firmwaretools.extract_common.appendIniArray(ini, "out_files", fwFullName, originalSource)
 
         packageIni = ConfigParser.ConfigParser()
         packageIni.add_section("package")
-        extract_common.setIni( packageIni, "package",
+        firmwaretools.extract_common.setIni( packageIni, "package",
             spec      = "bmc",
             module    = "dellbmc",
             type      = "BmcPackageWrapper",
@@ -60,7 +60,7 @@ def copyBmc(ini, originalSource, sourceDir, outputDir):
             vendor_version = vendorVersion, 
             
             extract_ver = version,
-            shortname = extract_common.getShortname("0x1028", "0x%04x" % id))
+            shortname = firmwaretools.extract_common.getShortname("0x1028", "0x%04x" % id))
 
         fd = None
         try:
@@ -73,10 +73,10 @@ def copyBmc(ini, originalSource, sourceDir, outputDir):
 
 
 # can skip DUP --extract command due to ordering. Should already be extracted.
-def extractBmcFromLinuxDup(ini, originalSource, sourceFile, outputDir):
+def extractBmcFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".bin"):
-        raise extract_common.skip("not .bin")
+        raise firmwaretools.extract_common.skip("not .bin")
 
     if os.path.isfile("./bmcflsh.dat") and os.path.isfile("./bmccfg.def") and os.path.isfile("./package.xml"):
         ret = copyBmc(ini, originalSource, os.getcwd(), outputDir)
@@ -84,10 +84,6 @@ def extractBmcFromLinuxDup(ini, originalSource, sourceFile, outputDir):
     return ret
 
 
-# some installshield executables crash wine, so do them first.
 processFunctions = [
-    ("extractBmcFromLinuxDup", extractBmcFromLinuxDup, version),
+    {"extension": ".bin", "version": version, "functionName": "extractBmcFromLinuxDup"},
     ]
-
-# convert to lowercase
-handledExtensions = ( ".bin", )

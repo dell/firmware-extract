@@ -34,32 +34,32 @@ import getopt
 import glob
 import os
 import Queue
-import sys
+import random
 import shutil
-import traceback
 import string
+import sys
 from threading import Thread
 import time
+import traceback
 import xmlrpclib
 
 import firmwaretools.ini_thread_proxy
 import firmwaretools.pycompat as pycompat
-import firmwaretools.extract_common as extract_common
+import firmwaretools.extract_common
 import firmwaretools.trace_decorator as trace_decorator
 from firmwaretools.trace_decorator import trace
 import firmwaretools
 sys.path.append(firmwaretools.__path__[0])
 
 processFunctions = []
-handledExtensions = [ ]
 versionArray = []
-modules = [ "extract_bios", "extract_bmc", "extract_lsi" ]
-#modules = [ "extract_bios", "extract_lsi" ]
+#modules = [ "extract_bios", "extract_bmc", "extract_lsi" ]
+modules = [ "extract_bios", "extract_lsi" ]
 
 unableToProcessStr = "UNPROCESSED: Version %s unable to process"
 
 @trace
-def extractHdr(ini, filename, outputDir, numFiles, thisNum):
+def extractHdr(ini, filename, outputDir, numFiles, thisNum, stdout, stderr):
     ret = 0
     global version
     global forceRebuild
@@ -70,64 +70,77 @@ def extractHdr(ini, filename, outputDir, numFiles, thisNum):
         procString = ini.get("processed_files", filename)
 
         if procString == unableToProcessStr:
-            print "%s Version %s not able to process..." % (outPrefix, version)
-            sys.stdout.flush()
+            stdout.write("%s Version %s not able to process...\n" % (outPrefix, version))
+            stdout.flush()
             return ret
 
         try:
             if procString.startswith("PROCESSED(%s):" % version):
                 functName = procString.split(":")[1].strip()
                 functVer  = procString.split(":")[2].strip()
-                for n, f, v in processFunctions:
-                    if n == functName and v == functVer:
-                        print "%s Already processed by this version, skipping..." % outPrefix
-                        sys.stdout.flush()
+                for funcDetails in processFunctions:
+                    if funcDetails["functionName"] == functName and funcDetails["version"] == functVer:
+                        stdout.write("%s Already processed by this version, skipping...\n" % outPrefix)
+                        stdout.flush()
                         return 1
         except IndexError:
             pass
 
-    handled = 0
-    for i in handledExtensions:
-        if filename.lower().endswith(i):
-            handled = 1
-            break
-
-    nameOfHandler = None
-    if handled:
+    tempdir=None
+    try:
         oldpwd = os.getcwd()
-        tempdir = pycompat.mktempdir()
-        try:
-            destFile = os.path.join(tempdir, os.path.basename(filename))
-            pycompat.copyFile(filename, destFile)
-            os.chdir(tempdir)
-            for name, function, functVersion in processFunctions:
-                try:
-                    ret = function(ini, filename, destFile, outputDir)
-                    if ret:
-                        ini.set("processed_files", filename, "PROCESSED(%s): %s:%s" % (version, name, functVersion))
-                        nameOfHandler = name
-                        break
-                except extract_common.skip:
-                    pass
-                except KeyboardInterrupt:
-                    raise
-                except Exception:
-                    #traceback.print_exc()
-                    pass
 
-        finally:
-            os.chdir(oldpwd)
+        for funcDetails in processFunctions:
+            try:
+                if not filename.lower().endswith(funcDetails["extension"]):
+                    continue
+                else:
+                    if tempdir is None:
+                        tempdir = pycompat.mktempdir()
+                        destFile = os.path.join(tempdir, os.path.basename(filename))
+                        pycompat.copyFile(filename, destFile)
+                        os.chdir(tempdir)
+    
+                ret = funcDetails["function"](ini, filename, destFile, outputDir, stdout, stderr)
+                if ret:
+                    ini.set("processed_files", filename, "PROCESSED(%s): %s:%s" % (version, funcDetails["functionName"], funcDetails["version"]))
+                    stdout.write("%s good: %s\n" % (outPrefix, funcDetails["functionName"]))
+                    break
+
+            except firmwaretools.extract_common.skip:
+                pass
+            except (KeyboardInterrupt,), e:
+                print "Caught <CTRL>-C. Exiting, please wait."
+                raise
+            except (Exception,), e:
+                traceback.print_exc()
+                pass
+
+    finally:
+        os.chdir(oldpwd)
+        if tempdir is not None:
             os.system("chmod -R u+rw %s" % tempdir)
             shutil.rmtree(tempdir)
 
-    if nameOfHandler is not None:
-        print "%s good: %s" % (outPrefix, nameOfHandler)
-    else:
-        print "%s: unable to process " % outPrefix
+    if not ret:
+        stdout.write("%s: unable to process\n" % outPrefix)
         ini.set("processed_files", filename, unableToProcessStr)
 
-    sys.stdout.flush()
+    stdout.flush()
     return ret
+
+def shutdownXmlRpcThread(xmlHandle, threadHandle):
+    threadHandle.sync()
+    threadHandle.kill()
+    while threadHandle.threadcount:
+        try:
+            # need to process at least one request for xmlrpcserver to end
+            xmlHandle.kill() 
+        except:
+            pass
+        print "waiting for thread to die."
+        time.sleep(2)
+
 
 forceRebuild = 0
 def main():
@@ -136,7 +149,7 @@ def main():
     outputDir=None
     forceType=None
     ini = None
-    extract_common.systemConfIni = ConfigParser.ConfigParser()
+    firmwaretools.extract_common.systemConfIni = ConfigParser.ConfigParser()
 
     iniThread = None
     numProcesses = 30
@@ -165,7 +178,7 @@ def main():
                 inputDir.append(argument)
             if option in ("-s", "--systemid_conf"):
                 print "reading config file: %s" % argument        
-                extract_common.systemConfIni.read(glob.glob(os.path.realpath(argument)))
+                firmwaretools.extract_common.systemConfIni.read(glob.glob(os.path.realpath(argument)))
             if option in ("-t", "--force_type"):
                 forceType=str("%s" % argument)
                 modules.append("extract_%s" % forceType)
@@ -174,12 +187,15 @@ def main():
         
         if outputDir is None: raise getopt.GetoptError("Need output dir", "")
 
-        global processFunctions, handledExtensions, versionArray, unableToProcessStr
+        global processFunctions, versionArray, unableToProcessStr
         for m in modules:
             module = __import__(m, globals(), locals(), [])
-            processFunctions.extend(module.processFunctions)
-            handledExtensions.extend(module.handledExtensions)
             versionArray.append( (m, module.version))
+            if hasattr(module, "processFunctions"):
+                for funcDetails in module.processFunctions:
+                    if not funcDetails.has_key("function"):
+                        funcDetails["function"] = getattr(module, funcDetails["functionName"])
+                    processFunctions.append(funcDetails)
 
         unableToProcessStr = unableToProcessStr % versionArray
 
@@ -194,7 +210,7 @@ def main():
             os.mkdir("out")
 
         ini = ConfigParser.ConfigParser()
-        ini.read( os.path.join(outputDir, "out", "config.ini"))
+        ini.read( os.path.join(outputDir, "config.ini"))
         if not ini.has_section("processed_files"):
             ini.add_section("processed_files")
 
@@ -204,8 +220,8 @@ def main():
         if not ini.has_section("main"):
             ini.add_section("main")
 
-        port = 8000
-        iniThread = firmwaretools.ini_thread_proxy.XmlRpcThread(threadNumber=0, port=port, iniPath=os.path.join(outputDir, "out", "config.ini"), ini=ini)
+        port = random.randrange(16384, 32767)
+        iniThread = firmwaretools.ini_thread_proxy.XmlRpcThread(threadNumber=0, port=port, iniPath=os.path.join(outputDir, "config.ini"), ini=ini)
         ini = xmlrpclib.Server('http://localhost:%s' % port)
 
         start = time.time()
@@ -221,6 +237,8 @@ def main():
                 filelist.sort()
                 for file in filelist:
                     inputFiles.append(os.path.join(topdir,file))
+            print "done processing input directories"
+            sys.stdout.flush()
 
         children=[]
         inputFiles.sort()
@@ -241,6 +259,8 @@ def main():
             if pid: # parent
                 children.append(pid)
             else: #child
+                oldStdout = sys.stdout
+                oldStderr = sys.stderr
                 try:
                     # make sure we close inherited filehandles
                     # or we could hold open sockets, etc.
@@ -249,26 +269,43 @@ def main():
                             os.close(i)
                         except OSError:
                             pass
-                    extractHdr(ini, hdrFile, outputDir, thisNum=index, numFiles=numInputFiles)
-                except (KeyboardInterrupt):
-                    os._exit(0)
-                except (Exception), e:
-                    import traceback
-                    traceback.print_exc()
-                except: 
-                    pass
 
+                    # reset logging to new file
+                    hdrFileName=os.path.basename(hdrFile)
+                    oldStdout = os.fdopen(os.dup(sys.stdout.fileno()), "a")
+                    oldStderr = os.fdopen(os.dup(sys.stderr.fileno()), "a")
+
+                    logFileName = os.path.join(outputDir, "log", "%s-LOG" % hdrFileName)
+                    sys.stdout = open( logFileName, "w+" )
+                    sys.stderr = sys.stdout
+                    os.dup2( sys.stdout.fileno(), 1 )
+                    os.dup2( sys.stderr.fileno(), 2 )
+
+                    extractHdr(ini, hdrFile, outputDir, thisNum=index, numFiles=numInputFiles, stdout=oldStdout, stderr=oldStderr)
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    oldStdout.flush()
+                    oldStderr.flush()
+                    if sys.stdout.tell() == 0:
+                        os.unlink(logFileName)
+                except (KeyboardInterrupt):
+                    pass
+                except: 
+                    traceback.print_exc()
+
+                sys.stdout.flush()
+                sys.stderr.flush()
+                oldStdout.flush()
+                oldStderr.flush()
                 os._exit(0)
 
         #wait for everybody to finish up.
         iniThread.sync()
         while len(children):
             child, status = os.waitpid(0,0)
-            iniThread.sync()
             children.remove(child)
 
-        iniThread.sync()
-        ini.kill()
+        shutdownXmlRpcThread(ini, iniThread)
         print "Finished in %s seconds" % (time.time() - start)
 
     except (getopt.GetoptError):
@@ -279,17 +316,18 @@ def main():
     except (KeyboardInterrupt):
         try:
             print "kill ini thread."
-            ini.kill()
+            shutdownXmlRpcThread(ini, iniThread)
             print "wait for all children to finish"
             os.wait()
         except:
-            import traceback
             traceback.print_exc()
             
         sys.exit(3)
 
     except Exception:
-        ini.kill()
+        if iniThread is not None:
+            shutdownXmlRpcThread(ini, iniThread)
+        traceback.print_exc()
 
     return 0 #shell logic
 

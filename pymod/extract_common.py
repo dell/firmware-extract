@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:
+# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:textwidth=0:
 
   #############################################################################
   #
@@ -31,11 +31,13 @@ import HelperXml
 from trace_decorator import trace, dprint, setModule
 
 class skip(Exception): pass
+class fubar(Exception): pass
 
 systemConfIni=None
 #@trace
 def getShortname(vendid, sysid):
     if not systemConfIni:
+        raise fubar("need to configure systemConfIni before continuing... programmer error")
         return ""
 
     if not systemConfIni.has_section("id_to_name"):
@@ -53,7 +55,8 @@ getShortname = trace(getShortname)
 def appendIniArray(ini, section, option, toAdd):
     fn_array = []
     if ini.has_option(section, option):
-        fn_array = eval(ini.get(section, option, raw=1))
+        # 1 at end represents raw=1, dont interpolate
+        fn_array = eval(ini.get(section, option, 1))
 
     if toAdd not in fn_array:
         fn_array.append(toAdd)

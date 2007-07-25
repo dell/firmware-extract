@@ -1,25 +1,36 @@
 #!/usr/bin/python
+# vim:tw=0:ts=4:sw=4:ai:
 
 import ConfigParser
 import signal
 import SimpleXMLRPCServer
 import threading
 
+from SocketServer import ThreadingMixIn,TCPServer
+TCPServer.allow_reuse_address=True
+class AsyncXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer.SimpleXMLRPCServer):
+    pass
+
 class XmlRpcThread(threading.Thread):
+    stop = 0
+    threadcount=0
+    lock=threading.Lock()
+
     def __init__ (self, threadNumber, port, ini, iniPath):
         threading.Thread.__init__(self)
-        self.stop = 0
         self.id = threadNumber
         self.iniPath = iniPath 
         self.port = port 
-        self.lock = threading.Lock()
         self.ini = ini
         self.running=0
+        XmlRpcThread.lock.acquire()
+        XmlRpcThread.threadcount = XmlRpcThread.threadcount + 1
+        XmlRpcThread.lock.release()
         self.start()
 
     def sync(self):
         try:
-            self.lock.acquire()
+            XmlRpcThread.lock.acquire()
             fh = open(self.iniPath, "w+")
             self.ini.write(fh)
             fh.close()
@@ -27,34 +38,38 @@ class XmlRpcThread(threading.Thread):
             import traceback
             traceback.print_exc()
 
-        self.lock.release()
+        XmlRpcThread.lock.release()
         return 0
 
     def kill(self):
-        self.stop=1 
-        self.running=0
+        XmlRpcThread.stop=1 
         return 1
 
     def ping(self, value):
         print "was pinged."
         return value
 
-    def _dispatch(self, method, params):
+    def _dispatch(self, method, params, **kwargs):
         if hasattr(self, method) and method != "run" and not method.startswith("_"):
-            return getattr(self,method)(*params)
+            return getattr(self,method)(*params, **kwargs)
 
-        ret = getattr(self.ini, method)(*params)
+        ret = getattr(self.ini, method)(*params, **kwargs)
         if ret is None:
             ret = 0
         return ret
 
     def run(self):
-        server = SimpleXMLRPCServer.SimpleXMLRPCServer(('127.0.0.1', self.port), logRequests=0)
+        server = AsyncXMLRPCServer(('127.0.0.1', self.port), logRequests=0)
         server.register_instance(self)
         self.running=1
 
-        while not self.stop:
+        while not XmlRpcThread.stop:
             server.handle_request()
+
+        XmlRpcThread.lock.acquire()
+        XmlRpcThread.threadcount = XmlRpcThread.threadcount - 1
+        XmlRpcThread.lock.release()
+        self.running=0
 
 
 if __name__ == "__main__":
