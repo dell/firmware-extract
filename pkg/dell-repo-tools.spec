@@ -5,8 +5,8 @@
 # These are all automatically replaced by the release script.
 # START = Do not edit manually
 %define major 1
-%define minor 1
-%define sub 6
+%define minor 4
+%define sub 0
 %define extralevel %{nil}
 %define rpm_release 1
 %define release_name dell-repo-tools
@@ -56,7 +56,8 @@ BuildArch:      noarch
 %endif
 
 BuildRequires:  python-devel
-Requires: libsmbios-bin unshield firmware-tools firmware-addon-dell
+Requires: libsmbios-bin unshield firmware-addon-dell
+Requires: firmware-tools >= 0:1.4
 
 %description
 placeholder
