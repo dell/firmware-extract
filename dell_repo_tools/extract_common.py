@@ -44,7 +44,10 @@ def getShortname(vendid, sysid):
         return ""
 
     if systemConfIni.has_option("id_to_name", "shortname_ven_%s_dev_%s" % (vendid, sysid)):
-        return eval(systemConfIni.get("id_to_name", "shortname_ven_%s_dev_%s" % (vendid, sysid)))
+        try:
+            return eval(systemConfIni.get("id_to_name", "shortname_ven_%s_dev_%s" % (vendid, sysid)))
+        except Exception, e:
+            print "Ignoring error in config file: %s" % e
 
     return ""
 
@@ -56,7 +59,10 @@ def appendIniArray(ini, section, option, toAdd):
     fn_array = []
     if ini.has_option(section, option):
         # 1 at end represents raw=1, dont interpolate
-        fn_array = eval(ini.get(section, option, 1))
+        try:
+            fn_array = eval(ini.get(section, option, 1))
+        except Exception, e:
+            print "Ignoring error in config file: %s" % e
 
     if toAdd not in fn_array:
         fn_array.append(toAdd)
