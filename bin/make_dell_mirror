@@ -55,7 +55,14 @@ options="--use-cache -n -p -e -v --parallel=5 $exclude_list $size_range"
 lftp -c "open ftp://ftp.dell.com; \
     mirror $options bios ;\
     mirror $options esm ;\
+    mirror $options sas-raid ;\
+    mirror $options sas-non-raid ;\
+    mirror $options sas-hdd ;\
+    mirror $options sata ;\
+    mirror $options firmware ;\
     mirror $options scsi-raid ;\
+    mirror $options scsi-non-raid ;\
+    mirror $options scsi-drv ;\
     mirror $options catalog ;\
     mirror $options sysman ;\
     mirror $options cmsdk ;\
