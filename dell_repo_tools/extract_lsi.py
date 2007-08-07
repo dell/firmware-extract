@@ -22,9 +22,9 @@ import os
 import ConfigParser
 import xml.dom.minidom
 
-import pycompat
-import HelperXml
-import firmwaretools.extract_common
+import firmware_addon_dell.pycompat as pycompat
+import firmware_addon_dell.HelperXml as HelperXml
+import dell_repo_tools.extract_common
 
 DELL_VEN_ID = 0x1028
 
@@ -61,13 +61,13 @@ def copyLsi(ini, wrapper, originalSource, sourceDir, outputDir):
 
         fwFullName = ("%s_version_%s" % (fwShortName,dellVersion)).lower()
        
-        firmwaretools.extract_common.appendIniArray(ini, "out_files", fwFullName, originalSource)
+        dell_repo_tools.extract_common.appendIniArray(ini, "out_files", fwFullName, originalSource)
 
         # here we put 'version' as vendorVersion because the inventory tool can
         # only get vendor version, not dell version
         packageIni = ConfigParser.ConfigParser()
         packageIni.add_section("package")
-        firmwaretools.extract_common.setIni( packageIni, "package",
+        dell_repo_tools.extract_common.setIni( packageIni, "package",
             spec      = "lsi",
             module    = "delllsi",
             type      = wrapper,
@@ -101,7 +101,7 @@ def copyLsi(ini, wrapper, originalSource, sourceDir, outputDir):
             paths.append((None, os.path.join(outputDir, fwFullName)))
 
         for sysId, dest in paths:
-            firmwaretools.extract_common.safemkdir( dest )
+            dell_repo_tools.extract_common.safemkdir( dest )
     
             for f in glob.glob("*.[rR][oO][mM]"):
                 pycompat.copyFile( f, os.path.join(dest, f))
@@ -125,7 +125,7 @@ def copyLsi(ini, wrapper, originalSource, sourceDir, outputDir):
 def extractLsiRomFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".bin"):
-        raise firmwaretools.extract_common.skip("not .bin")
+        raise dell_repo_tools.extract_common.skip("not .bin")
 
     if os.path.isfile("./linflash.bin") and os.path.isfile("./package.xml"):
         ret = copyLsi(ini, "Perc4PackageWrapper", originalSource, os.getcwd(), outputDir)
@@ -143,7 +143,7 @@ def extractLsiRomFromWindowsDup(ini, originalSource, sourceFile, outputDir, stdo
     ret = 0
     
     if not sourceFile.lower().endswith(".exe"):
-        raise firmwaretools.extract_common.skip("not .exe")
+        raise dell_repo_tools.extract_common.skip("not .exe")
 
     if os.path.isfile("./NTFlash.exe") and os.path.isfile("./package.xml"):
         ret = copyLsi(ini, originalSource, os.getcwd(), outputDir)

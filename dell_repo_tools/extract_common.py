@@ -27,8 +27,8 @@ from __future__ import generators
 import os
 import xml.dom.minidom
 
-import HelperXml
-from trace_decorator import trace, dprint, setModule
+import firmware_addon_dell.HelperXml as HelperXml
+from firmwaretools.trace_decorator import trace, dprint, setModule
 
 class skip(Exception): pass
 class fubar(Exception): pass

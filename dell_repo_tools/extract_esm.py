@@ -24,9 +24,9 @@ import os
 import ConfigParser
 import xml.dom.minidom
 
-import pycompat
-import HelperXml
-import firmwaretools.extract_common
+import firmware_addon_dell.pycompat as pycompat
+import firmware_addon_dell.HelperXml as HelperXml
+import dell_repo_tools.extract_common
 
 # note: this is tied a bit too closely to dell update package format.
 # should use tools to pull vers directly.
@@ -43,7 +43,7 @@ def copyEsm2(ini, originalSource, sourceDir, outputDir):
         fwShortName = ("esm_firmware_ven_0x1028_dev_0x%04x" % id).lower()
         fwFullName = ("%s_version_%s" % (fwShortName,dellVersion)).lower()
         dest = os.path.join(outputDir, fwFullName)
-        firmwaretools.extract_common.safemkdir( dest )
+        dell_repo_tools.extract_common.safemkdir( dest )
 
 # i'm pretty certain i am specifying the correct files here, i closely examined
 #   the folder structure of extracted bmc and esm dups and all files are 
@@ -54,11 +54,11 @@ def copyEsm2(ini, originalSource, sourceDir, outputDir):
         pycompat.copyFile( "dcdiom32.def", os.path.join(dest, "dcdiom32.def"))
         pycompat.copyFile( "package.xml", os.path.join(dest, "package.xml"))
 
-        firmwaretools.extract_common.appendIniArray(ini, "out_files", fwFullName, originalSource)
+        dell_repo_tools.extract_common.appendIniArray(ini, "out_files", fwFullName, originalSource)
 
         packageIni = ConfigParser.ConfigParser()
         packageIni.add_section("package")
-        firmwaretools.extract_common.setIni( packageIni, "package",
+        dell_repo_tools.extract_common.setIni( packageIni, "package",
             spec      = "esm2",
             module    = "dellesm2",
             type      = "Esm2PackageWrapper",
@@ -73,7 +73,7 @@ def copyEsm2(ini, originalSource, sourceDir, outputDir):
             vendor_version = vendorVersion, 
             
             extract_ver = version,
-            shortname = firmwaretools.extract_common.getShortname("0x1028", "0x%04x" % id))
+            shortname = dell_repo_tools.extract_common.getShortname("0x1028", "0x%04x" % id))
 
         fd = None
         try:
@@ -89,7 +89,7 @@ def copyEsm2(ini, originalSource, sourceDir, outputDir):
 def extractEsm2FromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".bin"):
-        raise firmwaretools.extract_common.skip("not .bin")
+        raise dell_repo_tools.extract_common.skip("not .bin")
 
     if os.path.isfile("./smflsh2.dat") and os.path.isfile("./dcdiom32.def") and os.path.isfile("./package.xml"):
         ret = copyEsm(ini, originalSource, os.getcwd(), outputDir)

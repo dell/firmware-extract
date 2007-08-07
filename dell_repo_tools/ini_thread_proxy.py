@@ -5,6 +5,7 @@ import ConfigParser
 import signal
 import SimpleXMLRPCServer
 import threading
+import traceback
 
 from SocketServer import ThreadingMixIn,TCPServer
 TCPServer.allow_reuse_address=True
@@ -35,7 +36,6 @@ class XmlRpcThread(threading.Thread):
             self.ini.write(fh)
             fh.close()
         except:
-            import traceback
             traceback.print_exc()
 
         XmlRpcThread.lock.release()
@@ -89,7 +89,6 @@ if __name__ == "__main__":
             print "client get: %s" % ini.get("sectionname", "value")
             ini.sync() 
         except:
-            import traceback
             traceback.print_exc()
 
         print "stop threads"

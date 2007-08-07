@@ -70,17 +70,7 @@ distutils.core.setup (
         author_email="firmware-tools-devel@lists.us.dell.com",
         url="http://linux.dell.com/firmware-tools/",
 
-        package_dir={'firmwaretools': 'pymod'},
-        py_modules=[
-'firmwaretools.extract_bios_blacklist',
-'firmwaretools.extract_bios',
-'firmwaretools.extract_bmc',
-'firmwaretools.extract_common',
-'firmwaretools.extract_esm',
-'firmwaretools.extract_lsi',
-'firmwaretools.ini_thread_proxy',
-],
-
+        packages=[ 'dell_repo_tools' ],
         ext_modules = [ ],
         data_files=dataFileList,
         scripts=[],
