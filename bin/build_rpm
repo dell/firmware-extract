@@ -34,8 +34,8 @@ import ConfigParser
 import traceback
 
 import firmwaretools.pycompat  as pycompat
-import firmwaretools.HelperXml as HelperXml
-import firmwaretools.biosHdr   as biosHdr
+import firmware_addon_dell.HelperXml as HelperXml
+import firmware_addon_dell.biosHdr   as biosHdr
 import firmwaretools.repository as repository
 
 class NonExistentSpecFile(Exception): pass

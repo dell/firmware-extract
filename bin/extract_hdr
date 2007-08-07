@@ -43,18 +43,15 @@ import time
 import traceback
 import xmlrpclib
 
-import firmwaretools.ini_thread_proxy
+import dell_repo_tools.ini_thread_proxy
 import firmwaretools.pycompat as pycompat
-import firmwaretools.extract_common
+import dell_repo_tools.extract_common
 import firmwaretools.trace_decorator as trace_decorator
 from firmwaretools.trace_decorator import trace
-import firmwaretools
-sys.path.append(firmwaretools.__path__[0])
 
 processFunctions = []
 versionArray = []
-#modules = [ "extract_bios", "extract_bmc", "extract_lsi" ]
-modules = [ "extract_bios", "extract_lsi" ]
+modules = [ "dell_repo_tools.extract_bios", "dell_repo_tools.extract_bmc", "dell_repo_tools.extract_lsi" ]
 
 unableToProcessStr = "UNPROCESSED: Version %s unable to process"
 
@@ -107,7 +104,7 @@ def extractHdr(ini, filename, outputDir, numFiles, thisNum, stdout, stderr):
                     stdout.write("%s good: %s\n" % (outPrefix, funcDetails["functionName"]))
                     break
 
-            except firmwaretools.extract_common.skip:
+            except dell_repo_tools.extract_common.skip:
                 pass
             except (KeyboardInterrupt,), e:
                 print "Caught <CTRL>-C. Exiting, please wait."
@@ -149,7 +146,7 @@ def main():
     outputDir=None
     forceType=None
     ini = None
-    firmwaretools.extract_common.systemConfIni = ConfigParser.ConfigParser()
+    dell_repo_tools.extract_common.systemConfIni = ConfigParser.ConfigParser()
 
     iniThread = None
     numProcesses = 30
@@ -178,10 +175,10 @@ def main():
                 inputDir.append(argument)
             if option in ("-s", "--systemid_conf"):
                 print "reading config file: %s" % argument        
-                firmwaretools.extract_common.systemConfIni.read(glob.glob(os.path.realpath(argument)))
+                dell_repo_tools.extract_common.systemConfIni.read(glob.glob(os.path.realpath(argument)))
             if option in ("-t", "--force_type"):
                 forceType=str("%s" % argument)
-                modules.append("extract_%s" % forceType)
+                modules.append("dell_repo_tools.extract_%s" % forceType)
             if option in ("-v", "--verbose"):
                 trace_decorator.debug["__main__"] = 9
         
@@ -190,6 +187,8 @@ def main():
         global processFunctions, versionArray, unableToProcessStr
         for m in modules:
             module = __import__(m, globals(), locals(), [])
+            for i in m.split(".")[1:]:
+                module = getattr(module, i)
             versionArray.append( (m, module.version))
             if hasattr(module, "processFunctions"):
                 for funcDetails in module.processFunctions:
@@ -221,7 +220,7 @@ def main():
             ini.add_section("main")
 
         port = random.randrange(16384, 32767)
-        iniThread = firmwaretools.ini_thread_proxy.XmlRpcThread(threadNumber=0, port=port, iniPath=os.path.join(outputDir, "config.ini"), ini=ini)
+        iniThread = dell_repo_tools.ini_thread_proxy.XmlRpcThread(threadNumber=0, port=port, iniPath=os.path.join(outputDir, "config.ini"), ini=ini)
         ini = xmlrpclib.Server('http://localhost:%s' % port)
 
         start = time.time()

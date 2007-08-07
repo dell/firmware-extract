@@ -24,7 +24,7 @@ import os
 import ConfigParser
 import xml.dom.minidom
 
-import firmware_addon_dell.pycompat as pycompat
+import firmwaretools.pycompat as pycompat
 import firmware_addon_dell.HelperXml as HelperXml
 import dell_repo_tools.extract_common
 

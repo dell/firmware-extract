@@ -22,10 +22,8 @@ import os
 import sys
 import ConfigParser
 import re
-import xml.dom.minidom
 
-import firmware_addon_dell.pycompat
-import firmware_addon_dell.HelperXml
+import firmwaretools.pycompat as pycompat
 import firmware_addon_dell.biosHdr as biosHdr
 import dell_repo_tools.extract_common
 from extract_bios_blacklist import dell_system_id_blacklist
