@@ -72,14 +72,12 @@ distutils.core.setup (
 
         package_dir={'firmwaretools': 'pymod'},
         py_modules=[
-'firmwaretools.decorator',
 'firmwaretools.extract_bios_blacklist',
 'firmwaretools.extract_bios',
 'firmwaretools.extract_bmc',
 'firmwaretools.extract_common',
 'firmwaretools.extract_esm',
 'firmwaretools.extract_lsi',
-'firmwaretools.trace_decorator',
 'firmwaretools.ini_thread_proxy',
 ],
 
