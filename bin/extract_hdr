@@ -25,7 +25,7 @@ usage:
 
 from __future__ import generators
 
-version = "1.9"
+version = "1.10"
 
 # import arranged alphabetically
 import ConfigParser
