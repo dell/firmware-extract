@@ -205,9 +205,8 @@ def main():
         oldpwd = os.getcwd()
         os.chdir(outputDir)
 
-        if not os.access("out", os.F_OK):
-            os.mkdir("out")
-            os.mkdir("out/log")
+        if not os.access("log", os.F_OK):
+            os.mkdir("log")
 
         ini = ConfigParser.ConfigParser()
         ini.read( os.path.join(outputDir, "config.ini"))
