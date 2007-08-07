@@ -207,6 +207,7 @@ def main():
 
         if not os.access("out", os.F_OK):
             os.mkdir("out")
+            os.mkdir("out/log")
 
         ini = ConfigParser.ConfigParser()
         ini.read( os.path.join(outputDir, "config.ini"))
@@ -271,14 +272,16 @@ def main():
 
                     # reset logging to new file
                     hdrFileName=os.path.basename(hdrFile)
-                    oldStdout = os.fdopen(os.dup(sys.stdout.fileno()), "a")
-                    oldStderr = os.fdopen(os.dup(sys.stderr.fileno()), "a")
-
-                    logFileName = os.path.join(outputDir, "log", "%s-LOG" % hdrFileName)
-                    sys.stdout = open( logFileName, "w+" )
-                    sys.stderr = sys.stdout
-                    os.dup2( sys.stdout.fileno(), 1 )
-                    os.dup2( sys.stderr.fileno(), 2 )
+                    try:
+                        oldStdout = os.fdopen(os.dup(sys.stdout.fileno()), "a")
+                        oldStderr = os.fdopen(os.dup(sys.stderr.fileno()), "a")
+                        logFileName = os.path.join(outputDir, "log", "%s-LOG" % hdrFileName)
+                        sys.stdout = open( logFileName, "w+" )
+                        sys.stderr = sys.stdout
+                        os.dup2( sys.stdout.fileno(), 1 )
+                        os.dup2( sys.stderr.fileno(), 2 )
+                    except IOError:
+                        pass
 
                     extractHdr(ini, hdrFile, outputDir, thisNum=index, numFiles=numInputFiles, stdout=oldStdout, stderr=oldStderr)
                     sys.stdout.flush()

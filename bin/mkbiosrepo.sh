@@ -67,6 +67,7 @@ fi
 if [ -z "$NO_EXTRACT" ]; then
   echo "Extracting HDR files."
   mkdir -p $OUTDIR/SPECS
+  mkdir -p $OUTDIR/out/log
   cp -f /usr/share/firmware/spec/systemid.conf $OUTDIR/SPECS/systemid.conf
   extract_hdr -d $MIRROR_DIR -o $OUTDIR/out -s $OUTDIR/SPECS/\*.conf $ADDITIONAL_TYPES
 fi
