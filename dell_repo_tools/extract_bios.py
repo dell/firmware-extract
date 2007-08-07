@@ -87,7 +87,7 @@ def copyHdr(ini, originalSource, hdrFile, outputDir):
 
         dell_repo_tools.extract_common.setIni( packageIni, "package",
             spec      = "bios",
-            module    = "firmwaretools.dellbios",
+            module    = "firmware_addon_dell.dellbios",
             type      = "BiosPackage",
             name      = "system_bios(ven_0x1028_dev_0x%04x)" % id,
             safe_name = systemName,
