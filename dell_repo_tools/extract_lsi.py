@@ -14,7 +14,7 @@ from __future__ import generators
 
 # Change this version # to cause all packages built with this module to be
 # rebuilt. 
-version = "1.10"
+version = "1.11"
 
 # import arranged alphabetically
 import glob
@@ -69,7 +69,7 @@ def copyLsi(ini, wrapper, originalSource, sourceDir, outputDir):
         packageIni.add_section("package")
         dell_repo_tools.extract_common.setIni( packageIni, "package",
             spec      = "lsi",
-            module    = "delllsi",
+            module    = "dell_lsi.dell_lsi",
             type      = wrapper,
             name      = depName,
             safe_name = fwShortName,
@@ -128,13 +128,13 @@ def extractLsiRomFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout
         raise dell_repo_tools.extract_common.skip("not .bin")
 
     if os.path.isfile("./linflash.bin") and os.path.isfile("./package.xml"):
-        ret = copyLsi(ini, "Perc4PackageWrapper", originalSource, os.getcwd(), outputDir)
+        ret = copyLsi(ini, "Perc4Package", originalSource, os.getcwd(), outputDir)
 
     if os.path.isfile("./perc5int") and os.path.isfile("./package.xml"):
-        ret = copyLsi(ini, "Perc5iPackageWrapper", originalSource, os.getcwd(), outputDir)
+        ret = copyLsi(ini, "Perc5iPackage", originalSource, os.getcwd(), outputDir)
 
     if os.path.isfile("./perc5") and os.path.isfile("./package.xml"):
-        ret = copyLsi(ini, "Perc5ePackageWrapper", originalSource, os.getcwd(), outputDir)
+        ret = copyLsi(ini, "Perc5ePackage", originalSource, os.getcwd(), outputDir)
 
     return ret
 

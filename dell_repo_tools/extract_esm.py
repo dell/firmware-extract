@@ -60,8 +60,8 @@ def copyEsm2(ini, originalSource, sourceDir, outputDir):
         packageIni.add_section("package")
         dell_repo_tools.extract_common.setIni( packageIni, "package",
             spec      = "esm2",
-            module    = "dellesm2",
-            type      = "Esm2PackageWrapper",
+            module    = "dell_esm.dell_esm",
+            type      = "Esm2Package",
             name      = "esm_firmware(ven_0x1028_dev_0x%04x)" % id,
             safe_name = fwShortName,
             vendor_id = "0x1028",

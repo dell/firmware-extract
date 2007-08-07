@@ -12,7 +12,7 @@
 
 # Change this version # to cause all packages built with this module to be
 # rebuilt. 
-version = "1.3"
+version = "1.4"
 
 # import arranged alphabetically
 import os
@@ -47,8 +47,8 @@ def copyBmc(ini, originalSource, sourceDir, outputDir):
         packageIni.add_section("package")
         dell_repo_tools.extract_common.setIni( packageIni, "package",
             spec      = "bmc",
-            module    = "dellbmc",
-            type      = "BmcPackageWrapper",
+            module    = "dell_bmc.dell_bmc",
+            type      = "BmcPackage",
             name      = "bmc_firmware(ven_0x1028_dev_0x%04x)" % id,
             safe_name = fwShortName,
             vendor_id = "0x1028",

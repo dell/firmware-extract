@@ -14,7 +14,7 @@ from __future__ import generators
 
 # Change this version # to cause all packages built with this module to be
 # rebuilt. 
-version = "1.4"
+version = "1.5"
 
 # import arranged alphabetically
 import glob
@@ -89,8 +89,8 @@ def copyHdr(ini, originalSource, hdrFile, outputDir):
 
         dell_repo_tools.extract_common.setIni( packageIni, "package",
             spec      = "bios",
-            module    = "dellbios",
-            type      = "BiosPackageWrapper",
+            module    = "firmwaretools.dellbios",
+            type      = "BiosPackage",
             name      = "system_bios(ven_0x1028_dev_0x%04x)" % id,
             safe_name = systemName,
             vendor_id = "0x1028",
