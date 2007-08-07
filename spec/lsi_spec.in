@@ -28,9 +28,9 @@ Requires:  firmware-tools >= 0:1.1
 Requires:  dell-lsiflash
 
 %if %{?limit_system_support:1}%{!?limit_system_support:0}
-Provides: pci_firmware(%{full_pci_id})/system(%{limit_system_support}) = %{dell_version}
+Provides: pci_firmware(%{full_pci_id})/system(%{limit_system_support}) = %{dell_version}-%{release}
 %endif
-Provides:  pci_firmware(%{full_pci_id}) = %{dell_version}
+Provides:  pci_firmware(%{full_pci_id}) = %{dell_version}-%{release}
 
 %description
 This package contains PCI Firmware update version %{dell_version}  (vendor: %{vendor_version})

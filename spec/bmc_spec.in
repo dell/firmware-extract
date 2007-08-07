@@ -32,12 +32,12 @@ Source0:   %{safe_name}-%{rpm_version}.tar.bz2
 Requires:  firmware-addon-dell >= 0:1.1
 Requires:  firmware-tools >= 0:1.1
 #Requires:  dell-bmc-blacklist
-Provides:  bmc_firmware(ven_%{vendor_id}_dev_%{device_id}) = %{rpm_version}
+Provides:  bmc_firmware(ven_%{vendor_id}_dev_%{device_id}) = %{rpm_version}-%{release}
 Requires:  dell-bmcflash
 
 %if %{oldname_exists}
-Obsoletes: bmc_firmware_ven_%{vendor_id}_dev_%{device_id}
-Provides:  bmc_firmware_ven_%{vendor_id}_dev_%{device_id}
+Obsoletes: bmc_firmware_ven_%{vendor_id}_dev_%{device_id} < %{version}-%{release}
+Provides:  bmc_firmware_ven_%{vendor_id}_dev_%{device_id} = %{version}-%{release}
 %endif
 
 %description

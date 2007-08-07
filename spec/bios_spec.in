@@ -21,7 +21,7 @@
 Summary:   BIOS upgrade package for System: %{system_shortname}
 Name:      system_bios_%{system_shortname}
 Version:   %{version}
-Release:   17%{?revision:.%{revision}}
+Release:   18%{?revision:.%{revision}}
 Vendor:    Dell
 License:   Proprietary
 Group:     System Environment/Base
@@ -32,11 +32,11 @@ Source0:   %{safe_name}-%{version}.tar.bz2
 Requires:  firmware-addon-dell >= 0:1.1
 Requires:  firmware-tools >= 0:1.1
 #Requires:  dell-bios-blacklist
-Provides:  system_bios(ven_%{vendor_id}_dev_%{device_id}) = %{version}
+Provides:  system_bios(ven_%{vendor_id}_dev_%{device_id}) = %{version}-%{release}
 
 %if %{oldname_exists}
-Obsoletes: system_bios_ven_%{vendor_id}_dev_%{device_id}
-Provides:  system_bios_ven_%{vendor_id}_dev_%{device_id}
+Obsoletes: system_bios_ven_%{vendor_id}_dev_%{device_id} < %{version}-%{release}
+Provides:  system_bios_ven_%{vendor_id}_dev_%{device_id} = %{version}-%{release}
 %endif
 
 %description
