@@ -21,7 +21,7 @@
 Summary:   BIOS upgrade package for System: %{system_shortname}
 Name:      system_bios_%{system_shortname}
 Version:   %{version}
-Release:   16%{?revision:.%{revision}}
+Release:   17%{?revision:.%{revision}}
 Vendor:    Dell
 License:   Proprietary
 Group:     System Environment/Base

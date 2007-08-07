@@ -12,10 +12,10 @@
 %define full_pci_id ven_%{vendor_id}_dev_%{device_id}_subven_%{subvendor_id}_subdev_%{subdevice_id}
 
 
-Summary:   pci Firmware upgrade package
+Summary:   LSI RAID Controller firmware upgrade
 Name:      pci_firmware_%{full_pci_id}%{?limit_system_support:_for_system_%{limit_system_support}}
 Version:   %{dell_version}
-Release:   12%{?revision:.%{revision}}
+Release:   17%{?revision:.%{revision}}
 Vendor:    Dell
 License:   Proprietary
 Group:     System Environment/Base

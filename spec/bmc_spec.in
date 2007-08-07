@@ -21,7 +21,7 @@
 Summary:   BMC Firmware upgrade package for System: %{system_shortname}
 Name:      bmc_firmware_%{system_shortname}
 Version:   %{rpm_version}
-Release:   14%{?revision:.%{revision}}
+Release:   17%{?revision:.%{revision}}
 Vendor:    Dell
 License:   Proprietary
 Group:     System Environment/Base
