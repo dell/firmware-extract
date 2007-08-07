@@ -146,7 +146,7 @@ def extractLsiRomFromWindowsDup(ini, originalSource, sourceFile, outputDir, stdo
         raise dell_repo_tools.extract_common.skip("not .exe")
 
     if os.path.isfile("./NTFlash.exe") and os.path.isfile("./package.xml"):
-        ret = copyLsi(ini, originalSource, os.getcwd(), outputDir)
+        ret = copyLsi(ini, "Perc4Package", originalSource, os.getcwd(), outputDir)
 
     return ret
 
