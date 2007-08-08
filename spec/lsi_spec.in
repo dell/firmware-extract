@@ -15,7 +15,7 @@
 Summary:   LSI RAID Controller firmware upgrade
 Name:      pci_firmware_%{full_pci_id}%{?limit_system_support:_for_system_%{limit_system_support}}
 Version:   %{dell_version}
-Release:   17%{?revision:.%{revision}}
+Release:   18%{?revision:.%{revision}}
 Vendor:    Dell
 License:   Proprietary
 Group:     System Environment/Base
