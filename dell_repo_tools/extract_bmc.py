@@ -15,13 +15,15 @@
 version = "1.4"
 
 # import arranged alphabetically
-import os
 import ConfigParser
+import os
+import sys
 import xml.dom.minidom
 
 import firmwaretools.pycompat as pycompat
 import firmware_addon_dell.HelperXml as HelperXml
 import dell_repo_tools.extract_common
+from firmwaretools.trace_decorator import dprint, decorateAllFunctions
 
 # note: this is tied a bit too closely to dell update package format.
 # should use tools to pull vers directly.
@@ -83,6 +85,9 @@ def extractBmcFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout, s
 
     return ret
 
+
+# trace everything in this module
+decorateAllFunctions(sys.modules[__name__])
 
 processFunctions = [
     {"extension": ".bin", "version": version, "functionName": "extractBmcFromLinuxDup"},

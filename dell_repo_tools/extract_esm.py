@@ -20,8 +20,9 @@ Not tested yet. Not yet active in extract config.
 version = "1.3"
 
 # import arranged alphabetically
-import os
 import ConfigParser
+import os
+import sys
 import xml.dom.minidom
 
 import firmwaretools.pycompat as pycompat

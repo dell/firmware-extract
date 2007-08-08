@@ -27,11 +27,10 @@ import firmwaretools.pycompat as pycompat
 import firmware_addon_dell.biosHdr as biosHdr
 import dell_repo_tools.extract_common
 from extract_bios_blacklist import dell_system_id_blacklist
-from firmwaretools.trace_decorator import trace, dprint, setModule, debug
+from firmwaretools.trace_decorator import dprint, decorateAllFunctions
 
 dosre = re.compile(r"This program cannot be run in DOS mode")
 
-#@trace
 def canRunInDos(filename):
     fh = open(filename, "r")
     s = fh.read(512)
@@ -42,10 +41,6 @@ def canRunInDos(filename):
 
     return 1
 
-# backwards compat for python 2.2
-canRunInDos = trace(canRunInDos)
-
-#@trace
 def copyHdr(ini, originalSource, hdrFile, outputDir):
     ret = 0
     if not os.path.exists(hdrFile):
@@ -118,18 +113,12 @@ def copyHdr(ini, originalSource, hdrFile, outputDir):
     ret = 1
     return ret
 
-copyHdr = trace(copyHdr)
-
-#@trace
 def alreadyHdr(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if sourceFile.lower().endswith(".hdr"):
         ret = copyHdr(ini, originalSource, sourceFile, outputDir)
     return ret
 
-alreadyHdr = trace(alreadyHdr)
-
-#@trace
 def extractHdrFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".bin"):
@@ -143,9 +132,6 @@ def extractHdrFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout, s
 
     return ret
 
-extractHdrFromLinuxDup = trace(extractHdrFromLinuxDup)
-
-#@trace
 def extractHdrFromDcopyExe(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if sourceFile.lower().endswith(".exe"):
@@ -153,9 +139,6 @@ def extractHdrFromDcopyExe(ini, originalSource, sourceFile, outputDir, stdout, s
         ret = copyHdr(ini, originalSource, "bios.hdr", outputDir)
     return ret
 
-extractHdrFromDcopyExe = trace(extractHdrFromDcopyExe)
-
-#@trace
 def extractHdrFromWindowsDupOrInstallShield(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".exe") or canRunInDos(sourceFile):
@@ -181,9 +164,6 @@ def extractHdrFromWindowsDupOrInstallShield(ini, originalSource, sourceFile, out
 
     return ret
 
-extractHdrFromWindowsDupOrInstallShield = trace(extractHdrFromWindowsDupOrInstallShield)
-
-#@trace
 def extractHdrFromPrecisionWindowsExe(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
     if not sourceFile.lower().endswith(".exe"):
@@ -202,9 +182,8 @@ def extractHdrFromPrecisionWindowsExe(ini, originalSource, sourceFile, outputDir
 
     return ret
 
-extractHdrFromPrecisionWindowsExe = trace(extractHdrFromPrecisionWindowsExe)
-
-
+# trace everything in this module
+decorateAllFunctions(sys.modules[__name__])
 
 processFunctions = (
     {"extension": ".hdr", "version": version, "functionName": "alreadyHdr"},

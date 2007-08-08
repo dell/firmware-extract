@@ -25,16 +25,16 @@ from __future__ import generators
 
 # import arranged alphabetically
 import os
+import sys
 import xml.dom.minidom
 
 import firmware_addon_dell.HelperXml as HelperXml
-from firmwaretools.trace_decorator import trace, dprint, setModule
+from firmwaretools.trace_decorator import dprint, decorateAllFunctions
 
 class skip(Exception): pass
 class fubar(Exception): pass
 
 systemConfIni=None
-#@trace
 def getShortname(vendid, sysid):
     if not systemConfIni:
         raise fubar("need to configure systemConfIni before continuing... programmer error")
@@ -51,10 +51,6 @@ def getShortname(vendid, sysid):
 
     return ""
 
-# backwards compat decorator syntax for python 2.2
-getShortname = trace(getShortname)
-
-#@trace
 def appendIniArray(ini, section, option, toAdd):
     fn_array = []
     if ini.has_option(section, option):
@@ -70,18 +66,12 @@ def appendIniArray(ini, section, option, toAdd):
 
     ini.set(section, option, repr(fn_array))
 
-appendIniArray = trace(appendIniArray)
-
-#@trace
 def safemkdir(dest):
     try:
         os.makedirs( dest )
     except OSError: #already exists
         pass
 
-safemkdir = trace(safemkdir)
-
-#@trace
 def setIni(ini, section, **kargs):
     if not ini.has_section(section):
         ini.add_section(section)
@@ -89,9 +79,6 @@ def setIni(ini, section, **kargs):
     for (key, item) in kargs.items():
         ini.set(section, key, item)
 
-setIni = trace(setIni)
-
-#@trace
 def getBiosDependencies(packageXml):
     ''' returns list of supported systems from package xml '''
     if os.path.exists( packageXml ):
@@ -102,4 +89,5 @@ def getBiosDependencies(packageXml):
                 dep = dep.lower()
                 yield (systemId, dep)
 
-getBiosDependencies = trace(getBiosDependencies)
+# trace everything in this module
+decorateAllFunctions(sys.modules[__name__])

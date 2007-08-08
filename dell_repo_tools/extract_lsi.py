@@ -17,14 +17,16 @@ from __future__ import generators
 version = "1.11"
 
 # import arranged alphabetically
+import ConfigParser
 import glob
 import os
-import ConfigParser
+import sys
 import xml.dom.minidom
 
 import firmwaretools.pycompat as pycompat
 import firmware_addon_dell.HelperXml as HelperXml
 import dell_repo_tools.extract_common
+from firmwaretools.trace_decorator import dprint, decorateAllFunctions
 
 DELL_VEN_ID = 0x1028
 
@@ -138,17 +140,38 @@ def extractLsiRomFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout
 
     return ret
 
-#can skip DUP --extract command due to ordering. Should already be extracted.
+# can skip DUP --extract command due to ordering. Should already be extracted.
 def extractLsiRomFromWindowsDup(ini, originalSource, sourceFile, outputDir, stdout, stderr):
     ret = 0
-    
     if not sourceFile.lower().endswith(".exe"):
         raise dell_repo_tools.extract_common.skip("not .exe")
 
     if os.path.isfile("./NTFlash.exe") and os.path.isfile("./package.xml"):
         ret = copyLsi(ini, "Perc4Package", originalSource, os.getcwd(), outputDir)
 
+    files = [ f.lower() for f in os.listdir(".") ]
+    if 'perc5int.exe' in files and 'package.xml' in files:
+        ret = copyLsi(ini, "Perc5iPackage", originalSource, os.getcwd(), outputDir)
+
+    if 'perc5.exe' in files and 'package.xml' in files:
+        ret = copyLsi(ini, "Perc5ePackage", originalSource, os.getcwd(), outputDir)
+
     return ret
+
+# Cant use this because we need metadata...
+def extractLsiRomFromDos(ini, originalSource, sourceFile, outputDir, stdout, stderr):
+    ret = 0
+    if not sourceFile.lower().endswith(".exe"):
+        raise dell_repo_tools.extract_common.skip("not .exe")
+
+    files = [ f.lower() for f in os.listdir(".") ]
+    if 'megafl.exe' in files:
+        ret = copyLsi(ini, "Perc5iPackage", originalSource, os.getcwd(), outputDir)
+
+    return ret
+
+# trace everything in this module
+decorateAllFunctions(sys.modules[__name__])
 
 # some installshield executables crash wine, so do them first.
 processFunctions = [
