@@ -107,6 +107,9 @@ def copyLsi(ini, wrapper, originalSource, sourceDir, outputDir):
     
             for f in glob.glob("*.[rR][oO][mM]"):
                 pycompat.copyFile( f, os.path.join(dest, f))
+
+            for f in glob.glob("*.[Ff][Ww]"):
+                pycompat.copyFile( f, os.path.join(dest, f))
     
             pycompat.copyFile( "package.xml", os.path.join(dest, "package.xml"))
 
@@ -138,6 +141,15 @@ def extractLsiRomFromLinuxDup(ini, originalSource, sourceFile, outputDir, stdout
     if os.path.isfile("./perc5") and os.path.isfile("./package.xml"):
         ret = copyLsi(ini, "Perc5ePackage", originalSource, os.getcwd(), outputDir)
 
+    if os.path.isfile("./perc5iadap") and os.path.isfile("./package.xml"):
+        ret = copyLsi(ini, "Perc5eAdapPackage", originalSource, os.getcwd(), outputDir)
+
+    if os.path.isfile("./sas5iradapter") and os.path.isfile("./package.xml"):
+        ret = copyLsi(ini, "Sas5irPackage", originalSource, os.getcwd(), outputDir)
+
+    if os.path.isfile("./sas5irint") and os.path.isfile("./package.xml"):
+        ret = copyLsi(ini, "Sas5irintPackage", originalSource, os.getcwd(), outputDir)
+
     return ret
 
 # can skip DUP --extract command due to ordering. Should already be extracted.
@@ -158,17 +170,6 @@ def extractLsiRomFromWindowsDup(ini, originalSource, sourceFile, outputDir, stdo
 
     return ret
 
-# Cant use this because we need metadata...
-def extractLsiRomFromDos(ini, originalSource, sourceFile, outputDir, stdout, stderr):
-    ret = 0
-    if not sourceFile.lower().endswith(".exe"):
-        raise dell_repo_tools.extract_common.skip("not .exe")
-
-    files = [ f.lower() for f in os.listdir(".") ]
-    if 'megafl.exe' in files:
-        ret = copyLsi(ini, "Perc5iPackage", originalSource, os.getcwd(), outputDir)
-
-    return ret
 
 # trace everything in this module
 decorateAllFunctions(sys.modules[__name__])
