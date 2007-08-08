@@ -7,14 +7,14 @@
   # Dual Licenced under GNU GPL and OSL
   #
   #############################################################################
-"""extract_hdr: 
+"""extract_hdr:
 
 usage:
     -h | --help         print this message
-*   -o | --output_dir   place to put extracted files. (creates output 
+*   -o | --output_dir   place to put extracted files. (creates output
                         dir structure here)
     -i | --input_file   only extract one file (output to output_dir)
-    -d | --input_dir    extract all files in dir (recursively) 
+    -d | --input_dir    extract all files in dir (recursively)
     -s | --systemid_conf specify config file of sysid <-> name mappings, to
                         give friendly names to BIOS RPMS.
     -t| --force_type   to build RPMs for firmwares apart from bios and raid
@@ -56,20 +56,32 @@ modules = [ "dell_repo_tools.extract_bios", "dell_repo_tools.extract_bmc", "dell
 unableToProcessStr = "UNPROCESSED: Version %s unable to process"
 
 @trace
-def extractHdr(ini, filename, outputDir, numFiles, thisNum, stdout, stderr):
-    ret = 0
-    global version
+def saveTerminalOutput():
+    newStdoutFd = os.dup(sys.stdout.fileno())
+    newStderrFd = os.dup(sys.stderr.fileno())
+    return (
+        os.fdopen(newStdoutFd, "a"),
+        os.fdopen(newStderrFd, "a")
+        )
+
+@trace
+def restoreTerminalOutput(realStdout, realStderr):
+    os.dup2( realStdout.fileno(), 1 )
+    os.dup2( realStderr.fileno(), 2 )
+    sys.stdout=realStdout
+    sys.stderr=realStderr
+
+@trace
+def checkAlreadyProcessed(ini, filename, outputDir, numFiles, thisNum, stdout, stderr):
     global forceRebuild
     outPrefix = "%04i/%04i %s File: %s" % (thisNum, numFiles, os.getpid(), filename)
-
     if ini.has_option("processed_files", filename) and not forceRebuild:
-
         procString = ini.get("processed_files", filename)
 
         if procString == unableToProcessStr:
             stdout.write("%s Version %s not able to process...\n" % (outPrefix, version))
             stdout.flush()
-            return ret
+            return 1
 
         try:
             if procString.startswith("PROCESSED(%s):" % version):
@@ -82,6 +94,15 @@ def extractHdr(ini, filename, outputDir, numFiles, thisNum, stdout, stderr):
                         return 1
         except IndexError:
             pass
+
+    return 0
+
+
+@trace
+def extractHdr(ini, filename, outputDir, numFiles, thisNum, stdout, stderr):
+    ret = 0
+    global version
+    outPrefix = "%04i/%04i %s File: %s" % (thisNum, numFiles, os.getpid(), filename)
 
     tempdir=None
     try:
@@ -97,7 +118,7 @@ def extractHdr(ini, filename, outputDir, numFiles, thisNum, stdout, stderr):
                         destFile = os.path.join(tempdir, os.path.basename(filename))
                         pycompat.copyFile(filename, destFile)
                         os.chdir(tempdir)
-    
+
                 ret = funcDetails["function"](ini, filename, destFile, outputDir, stdout, stderr)
                 if ret:
                     ini.set("processed_files", filename, "PROCESSED(%s): %s:%s" % (version, funcDetails["functionName"], funcDetails["version"]))
@@ -114,6 +135,7 @@ def extractHdr(ini, filename, outputDir, numFiles, thisNum, stdout, stderr):
                 pass
 
     finally:
+        stdout.flush()
         os.chdir(oldpwd)
         if tempdir is not None:
             os.system("chmod -R u+rw %s" % tempdir)
@@ -126,13 +148,14 @@ def extractHdr(ini, filename, outputDir, numFiles, thisNum, stdout, stderr):
     stdout.flush()
     return ret
 
+@trace
 def shutdownXmlRpcThread(xmlHandle, threadHandle):
     threadHandle.sync()
     threadHandle.kill()
     while threadHandle.threadcount:
         try:
             # need to process at least one request for xmlrpcserver to end
-            xmlHandle.kill() 
+            xmlHandle.kill()
         except:
             pass
         print "waiting for thread to die."
@@ -150,6 +173,7 @@ def main():
 
     iniThread = None
     numProcesses = 30
+    realStdout, realStderr = saveTerminalOutput()
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hd:i:o:s:ft:vp:", [
@@ -174,14 +198,14 @@ def main():
             if option in ("-d", "--input_dir"):
                 inputDir.append(argument)
             if option in ("-s", "--systemid_conf"):
-                print "reading config file: %s" % argument        
+                print "reading config file: %s" % argument
                 dell_repo_tools.extract_common.systemConfIni.read(glob.glob(os.path.realpath(argument)))
             if option in ("-t", "--force_type"):
                 forceType=str("%s" % argument)
                 modules.append("dell_repo_tools.extract_%s" % forceType)
             if option in ("-v", "--verbose"):
                 trace_decorator.debug["__main__"] = 9
-        
+
         if outputDir is None: raise getopt.GetoptError("Need output dir", "")
 
         global processFunctions, versionArray, unableToProcessStr
@@ -239,11 +263,27 @@ def main():
             print "done processing input directories"
             sys.stdout.flush()
 
+        for i in (sys.stdout, sys.stderr, realStdout, realStderr): i.flush()
+
         children=[]
         inputFiles.sort()
         numInputFiles = len(inputFiles)
         for index in xrange(numInputFiles):
+            # reset logging to new file
             hdrFile = inputFiles[index]
+            hdrFileName=os.path.basename(hdrFile)
+            logFileName = os.path.join(outputDir, "log", "%s-LOG" % hdrFileName)
+            try:
+                sys.stdout = open( logFileName, "w+" )
+                sys.stderr = sys.stdout
+                os.dup2( sys.stdout.fileno(), 1 )
+                os.dup2( sys.stderr.fileno(), 2 )
+            except IOError:
+                pass
+
+            if checkAlreadyProcessed(ini, hdrFile, outputDir, thisNum=index, numFiles=numInputFiles, stdout=realStdout, stderr=realStderr):
+                continue
+
             # only let configured number of children at once
             while len(children) > numProcesses:
                 child, status = os.waitpid(0,0)
@@ -251,54 +291,33 @@ def main():
 
             # one of the children had to have finished, so sync the config file
             iniThread.sync()
-                
-            sys.stdout.flush()
-            sys.stderr.flush()
+
+            for i in (sys.stdout, sys.stderr, realStdout, realStderr): i.flush()
             pid = os.fork()
             if pid: # parent
                 children.append(pid)
             else: #child
-                oldStdout = sys.stdout
-                oldStderr = sys.stderr
                 try:
                     # make sure we close inherited filehandles
                     # or we could hold open sockets, etc.
-                    for i in xrange(3,255): 
+                    for i in xrange(sys.stderr.fileno()+1,255):
                         try:
                             os.close(i)
                         except OSError:
                             pass
 
-                    # reset logging to new file
-                    hdrFileName=os.path.basename(hdrFile)
-                    try:
-                        oldStdout = os.fdopen(os.dup(sys.stdout.fileno()), "a")
-                        oldStderr = os.fdopen(os.dup(sys.stderr.fileno()), "a")
-                        logFileName = os.path.join(outputDir, "log", "%s-LOG" % hdrFileName)
-                        sys.stdout = open( logFileName, "w+" )
-                        sys.stderr = sys.stdout
-                        os.dup2( sys.stdout.fileno(), 1 )
-                        os.dup2( sys.stderr.fileno(), 2 )
-                    except IOError:
-                        pass
-
-                    extractHdr(ini, hdrFile, outputDir, thisNum=index, numFiles=numInputFiles, stdout=oldStdout, stderr=oldStderr)
-                    sys.stdout.flush()
-                    sys.stderr.flush()
-                    oldStdout.flush()
-                    oldStderr.flush()
+                    extractHdr(ini, hdrFile, outputDir, thisNum=index, numFiles=numInputFiles, stdout=realStdout, stderr=realStderr)
                     if sys.stdout.tell() == 0:
                         os.unlink(logFileName)
-                except (KeyboardInterrupt):
-                    pass
-                except: 
-                    traceback.print_exc()
+                except:
+                    realStderr.write(traceback.format_exc())
 
-                sys.stdout.flush()
-                sys.stderr.flush()
-                oldStdout.flush()
-                oldStderr.flush()
+                for i in (sys.stdout, sys.stderr, realStdout, realStderr): i.flush()
                 os._exit(0)
+
+        #make print work again...
+        for i in (sys.stdout, sys.stderr, realStdout, realStderr): i.flush()
+        restoreTerminalOutput(realStdout, realStderr)
 
         #wait for everybody to finish up.
         iniThread.sync()
@@ -307,28 +326,31 @@ def main():
             children.remove(child)
 
         shutdownXmlRpcThread(ini, iniThread)
-        print "Finished in %s seconds" % (time.time() - start)
+        realStdout.write( "Finished in %s seconds\n" % (time.time() - start))
 
     except (getopt.GetoptError):
+        restoreTerminalOutput(realStdout, realStderr)
         # print help information and exit:
-        print __doc__
+        realStdout.write( __doc__ + "\n")
         sys.exit(2)
 
     except (KeyboardInterrupt):
+        restoreTerminalOutput(realStdout, realStderr)
         try:
-            print "kill ini thread."
+            realStdout.write( "kill ini thread.\n")
             shutdownXmlRpcThread(ini, iniThread)
-            print "wait for all children to finish"
+            realStdout.write( "wait for all children to finish\n")
             os.wait()
         except:
-            traceback.print_exc()
-            
+            realStderr.write(traceback.format_exc())
+
         sys.exit(3)
 
     except Exception:
+        restoreTerminalOutput(realStdout, realStderr)
         if iniThread is not None:
             shutdownXmlRpcThread(ini, iniThread)
-        traceback.print_exc()
+        realStderr.write(traceback.format_exc())
 
     return 0 #shell logic
 
