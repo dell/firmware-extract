@@ -51,7 +51,7 @@ from firmwaretools.trace_decorator import trace
 
 processFunctions = []
 versionArray = []
-modules = [ "dell_repo_tools.extract_bios", "dell_repo_tools.extract_bmc", "dell_repo_tools.extract_lsi" ]
+modules = [ "firmware_addon_dell.extract_bios", "dell_bmc.extract_bmc", "dell_lsi.extract_lsi" ]
 
 unableToProcessStr = "UNPROCESSED: Version %s unable to process"
 
@@ -202,7 +202,7 @@ def main():
                 dell_repo_tools.extract_common.systemConfIni.read(glob.glob(os.path.realpath(argument)))
             if option in ("-t", "--force_type"):
                 forceType=str("%s" % argument)
-                modules.append("dell_repo_tools.extract_%s" % forceType)
+                modules.append(forceType)
             if option in ("-v", "--verbose"):
                 trace_decorator.debug["__main__"] = 9
 
@@ -226,11 +226,8 @@ def main():
         if not os.path.exists(outputDir):
             os.makedirs(outputDir)
 
-        oldpwd = os.getcwd()
-        os.chdir(outputDir)
-
-        if not os.access("log", os.F_OK):
-            os.mkdir("log")
+        if not os.access(os.path.join(outputDir,"log"), os.F_OK):
+            os.mkdir(os.path.join(outputDir,"log"))
 
         ini = ConfigParser.ConfigParser()
         ini.read( os.path.join(outputDir, "config.ini"))
@@ -284,13 +281,13 @@ def main():
             if checkAlreadyProcessed(ini, hdrFile, outputDir, thisNum=index, numFiles=numInputFiles, stdout=realStdout, stderr=realStderr):
                 continue
 
-            # only let configured number of children at once
+            # only spawn configured number of children at once
             while len(children) > numProcesses:
                 child, status = os.waitpid(0,0)
                 children.remove(child)
-
-            # one of the children had to have finished, so sync the config file
-            iniThread.sync()
+            else:
+                # or or more children finished, sync config file
+                iniThread.sync()
 
             for i in (sys.stdout, sys.stderr, realStdout, realStderr): i.flush()
             pid = os.fork()
