@@ -30,3 +30,5 @@ for i in *.tar.{gz,bz2} *.zip *.src.rpm; do
 done
 
 /var/ftp/pub/yum/dell-repo/software/_tools/upload_rpm.sh ./${RELEASE_STRING}-${RPM_RELEASE}*.src.rpm
+
+git push --tags
