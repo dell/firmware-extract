@@ -1,12 +1,12 @@
 
 # example of how to use this spec file to build a PCI RPM:
-# rpmbuild   
-#	--define "safe_name pci_firmware_ven_0x1028_dev_0x0183"   
-#	--define "name pci_firmware(ven_0x1028_dev_0x0183)"   
-#	--define "vendor_id 0x1028"   
-#	--define "device_id 0x0183"   
-#	--define "version a05"   
-#	--define "revision 1"   
+# rpmbuild
+#	--define "safe_name pci_firmware_ven_0x1028_dev_0x0183"
+#	--define "name pci_firmware(ven_0x1028_dev_0x0183)"
+#	--define "vendor_id 0x1028"
+#	--define "device_id 0x0183"
+#	--define "version a05"
+#	--define "revision 1"
 #	-bb /home/michael_e_brown/spec/pci_spec.in
 
 %define full_pci_id ven_%{vendor_id}_dev_%{device_id}_subven_%{subvendor_id}_subdev_%{subdevice_id}
@@ -15,7 +15,7 @@
 Summary:   LSI RAID Controller firmware upgrade
 Name:      pci_firmware_%{full_pci_id}%{?limit_system_support:_for_system_%{limit_system_support}}
 Version:   %{dell_version}
-Release:   18%{?revision:.%{revision}}
+Release:   19%{?revision:.%{revision}}
 Vendor:    Dell
 License:   Proprietary
 Group:     System Environment/Base
@@ -35,9 +35,9 @@ Provides:  pci_firmware(%{full_pci_id}) = %{dell_version}-%{release}
 %description
 This package contains PCI Firmware update version %{dell_version}  (vendor: %{vendor_version})
 
-This is an _UNOFFICIAL_ package, not supported by Dell. Do not call Dell 
+This is an _UNOFFICIAL_ package, not supported by Dell. Do not call Dell
 technical support concerning this package, because you will not get help there.
-Please use the mailing lists for support. firmware-tools-devel@lists.us.dell.com 
+Please use the mailing lists for support. firmware-tools-devel@lists.us.dell.com
 would be a good place to start.
 
 If this package is useful to you, feedback is appreciated.
@@ -52,9 +52,7 @@ if [ "$RPM_BUILD_ROOT" != "/" ]; then
 	rm -rf $RPM_BUILD_ROOT
 fi
 mkdir -p $RPM_BUILD_ROOT/%{_datadir}/firmware/lsi%{?limit_system_support:/system_%{limit_system_support}}/%{safe_name}_version_%{dell_version}/
-install -m 644 *.[rR][oO][mM] $RPM_BUILD_ROOT/%{_datadir}/firmware/lsi%{?limit_system_support:/system_%{limit_system_support}}/%{safe_name}_version_%{dell_version}/ 
-install -m 644 package.ini $RPM_BUILD_ROOT/%{_datadir}/firmware/lsi%{?limit_system_support:/system_%{limit_system_support}}/%{safe_name}_version_%{dell_version}/
-install -m 644 package.xml $RPM_BUILD_ROOT/%{_datadir}/firmware/lsi%{?limit_system_support:/system_%{limit_system_support}}/%{safe_name}_version_%{dell_version}/ || true
+install -m 644 * $RPM_BUILD_ROOT/%{_datadir}/firmware/lsi%{?limit_system_support:/system_%{limit_system_support}}/%{safe_name}_version_%{dell_version}/
 
 
 %clean
@@ -65,9 +63,9 @@ fi
 %files
 %defattr(-,root,root)
 #%# doc dell-std-license.txt
-%{_datadir}/firmware/lsi/%{?limit_system_support:system_%{limit_system_support}/}*
+%{_datadir}/firmware/lsi/*
 
-%posttrans 
+%posttrans
 # only attempt to update after we have gotten to the end of the
 # transaction and all the requisite rpms have been installed. we might
 # have deps on other rpms.
