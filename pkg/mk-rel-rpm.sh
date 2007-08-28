@@ -31,4 +31,4 @@ done
 
 /var/ftp/pub/yum/dell-repo/software/_tools/upload_rpm.sh ./${RELEASE_STRING}-${RPM_RELEASE}*.src.rpm
 
-git push --tags
+git push --tags origin master:master
