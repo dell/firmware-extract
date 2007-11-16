@@ -51,6 +51,9 @@ for i in doc_files:
 for i in glob.glob("spec/*"):
     MANIFEST.write("include %s\n" % i )
 
+for i in glob.glob("pkg/debian/*"):
+    MANIFEST.write("include %s\n" % i)
+
 MANIFEST.write("include version.mk\n" )
 MANIFEST.write("include Makefile\n" )
 MANIFEST.write("include pkg/dell-repo-tools.spec\n" )
