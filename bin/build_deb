@@ -88,7 +88,7 @@ def makeTarball(ini, pkgDir, buildDir):
     safeName = debianCleanName(ini.get("package", "safe_name"))
 
     cwd = os.getcwd()
-    tarballName = "%s-%s.orig.tar.gz" % (safeName, ver)
+    tarballName = "%s_%s.orig.tar.gz" % (safeName, ver)
     tarballFullPath = os.path.join(buildDir, tarballName)
     tarballRoot = os.path.join(pkgDir, "..")
 
@@ -169,11 +169,11 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
 	   shortname = "system-bios-%s" % shortname
 	   packageIni.set("package", "debian_binpkgname", debianCleanName(shortname))
 
-    tarballFullPath, tarballName, pkgName, safeName, ver = makeTarball( packageIni, pkgDir, buildDir )
-
     cwd = os.getcwd()
     tmp_dir = tempfile.mkdtemp()
-    shutil.copyfile(tarballFullPath, os.path.join(tmp_dir, tarballName))
+
+    tarballFullPath, tarballName, pkgName, safeName, ver = makeTarball( packageIni, pkgDir, tmp_dir )
+
     os.chdir(tmp_dir)
 
     destDir = pkgName
@@ -188,11 +188,20 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
     populateTemplates(debianDir, dict(packageIni.items("package")))
     os.chmod(os.path.join(debianDir, 'rules'), 0755)
     
+    print "cwd = %s, destdir=%s" % (os.getcwd(), destDir)
     os.chdir(destDir)
-    cmd = "pdebuild --buildresult %s -- --debug" % cwd
+    cmd = "debuild -rfakeroot --check-dirname-level=0 --no-linda --no-lintian -i -us -uc -b"
     if pycompat.executeCommand(cmd):
         raise DebBuildFailed("DEB build command failed.")
     os.chdir(cwd)
+    
+    for topdir, dirlist, filelist in pycompat.walkPath(tmp_dir):
+        for f in filelist:
+            print "Copying %s to %s" % (os.path.join(topdir, f), buildDir)
+            shutil.copy2(os.path.join(topdir, f), buildDir)
+	    break
+        break
+
     shutil.rmtree(tmp_dir)
 
     # in case file is a hardlink, unlink to break it first.
@@ -232,9 +241,7 @@ def main():
 
         if buildDir is None: raise getopt.GetoptError("Need output dir", "")
 
-        safemkdir(buildDir)
         oldpwd = os.getcwd()
-        os.chdir(buildDir)
 
         packageDirs = []
         filteredList = []
