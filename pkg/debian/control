@@ -1,0 +1,14 @@
+Source: dell-repo-tools
+Section: admin
+Priority: optional
+Maintainer: Ubuntu MOTU Developers <ubuntu-motu@lists.ubuntu.com>
+Build-Depends: debhelper (>= 5), python-all-dev (>= 2.3.5-11), cdbs (>= 0.4.43), python-support (>= 0.5.3)
+Standards-Version: 3.7.2
+
+Package: dell-repo-tools
+Architecture: all
+Depends: ${python:Depends}, firmware-addon-dell (>= 1.4.9), firmware-tools (>= 1.5.8)
+Provides: ${python:Provides}
+Description: Scripts to extract BIOS/Firmware from Dell Update Packages
+ .
+  Homepage:  http://linux.dell.com/firmware-tools
