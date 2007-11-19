@@ -183,12 +183,10 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
     if pycompat.executeCommand(cmd):
         raise
 
-    print "copying templatedir %s to debianDir %s" % (templateDir, debianDir)
     shutil.copytree(templateDir, debianDir)
     populateTemplates(debianDir, dict(packageIni.items("package")))
     os.chmod(os.path.join(debianDir, 'rules'), 0755)
     
-    print "cwd = %s, destdir=%s" % (os.getcwd(), destDir)
     os.chdir(destDir)
     cmd = "debuild -rfakeroot --check-dirname-level=0 --no-linda --no-lintian -i -us -uc -b"
     if pycompat.executeCommand(cmd):
@@ -197,7 +195,6 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
     
     for topdir, dirlist, filelist in pycompat.walkPath(tmp_dir):
         for f in filelist:
-            print "Copying %s to %s" % (os.path.join(topdir, f), buildDir)
             shutil.copy2(os.path.join(topdir, f), buildDir)
 	    break
         break
