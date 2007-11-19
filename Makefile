@@ -148,7 +148,7 @@ DEBFILES= \
 
 # use debopts to do things like override maintainer email, etc.
 deb_destdir=$(BUILDDIR)/dist
-deb: $(TARBALL)
+deb: tarball
 	mkdir -p $(deb_destdir) ; \
 	tmp_dir=`mktemp -d /tmp/dell-repo-tools.XXXXXXXX` ; \
 	cp $(TARBALL) $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
@@ -160,7 +160,7 @@ deb: $(TARBALL)
 	cd - ; \
 	rm -rf $${tmp_dir}
 
-sdeb: $(TARBALL)
+sdeb: tarball
 	mkdir -p $(deb_destdir) ; \
 	tmp_dir=`mktemp -d /tmp/dell-repo-tools.XXXXXXXX` ; \
 	cp $(TARBALL) $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ;\
