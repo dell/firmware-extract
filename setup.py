@@ -35,7 +35,9 @@ for i in ("RELEASE_MAJOR", "RELEASE_MINOR", "RELEASE_SUBLEVEL", "RELEASE_EXTRALE
         globals()[i] = os.environ.get(i)
 
 gen_scripts = [
-    "bin/extract_hdr", "bin/extract_hdr_helper.dat", "bin/extract_hdr_helper.sh", "bin/build_rpm", "bin/mkbiosrepo.sh", "bin/make_dell_mirror"
+    "bin/extract_hdr", "bin/extract_hdr_helper.dat",
+    "bin/extract_hdr_helper.sh", "bin/build_rpm", "bin/mkbiosrepo.sh",
+    "bin/make_dell_mirror", "bin/build_deb"
     ]
 
 doc_files = [ "COPYING-GPL", "COPYING-OSL", "README", ]
@@ -49,7 +51,14 @@ for i in doc_files:
     MANIFEST.write("include " + i + "\n" )
 
 for i in glob.glob("spec/*"):
+    if os.path.isfile(i):
+        MANIFEST.write("include %s\n" % i )
+
+for i in glob.glob("spec/debian_bios/*"):
     MANIFEST.write("include %s\n" % i )
+
+for i in glob.glob("pkg/debian/*"):
+    MANIFEST.write("include %s\n" % i)
 
 MANIFEST.write("include version.mk\n" )
 MANIFEST.write("include Makefile\n" )
@@ -59,7 +68,8 @@ MANIFEST.close()
 
 dataFileList = []
 dataFileList.append(  ("/usr/bin/", gen_scripts ) )
-dataFileList.append(  ("/usr/share/firmware/spec/", glob.glob("spec/*")))
+dataFileList.append(  ("/usr/share/firmware/spec/", [f for f in glob.glob("spec/*") if os.path.isfile(f)]))
+dataFileList.append(  ("/usr/share/firmware/spec/debian_bios/", glob.glob("spec/debian_bios/*")))
 
 distutils.core.setup (
         name = 'dell-repo-tools',

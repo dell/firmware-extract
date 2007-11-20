@@ -86,5 +86,10 @@ if [ -z "$NO_RPM" ]; then
   rm -rf $OUTDIR/SOURCES
 fi
 
+if [ -z "$NO_DEB" ]; then
+  echo "Building DEBS."
+  build_deb -i $OUTDIR/out -b $OUTDIR -s /usr/share/firmware/spec
+fi
+
 
 echo "Run complete: $(date)"

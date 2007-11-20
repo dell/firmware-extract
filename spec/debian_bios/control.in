@@ -1,0 +1,21 @@
+Source: %(debian_sourcepkgname)s
+Section: admin
+Priority: optional
+Maintainer: firmware-tools developers <firmware-tools-devel@lists.us.dell.com>
+Build-Depends: debhelper (>= 5)
+Standards-Version: 3.7.2
+# private, used by dell-repo-tools
+X-Template-Release: 18
+
+Package: %(debian_binpkgname)s
+Architecture: all
+Depends: firmware-addon-dell (>= 0:1.1), firmware-tools (>= 0:1.1)
+Provides:  %(debian_sourcepkgname)s
+Description: BIOS upgrade package for System: %(shortname)s
+ This package contains BIOS update version %(version)s for System %(shortname)s
+ .
+ If this package is useful to you, feedback is appreciated on the
+ firmware-tools-devel@lists.us.dell.com mailing list.  You may
+ subscribe and read archives at http://lists.us.dell.com.
+ .
+  Homepage:  http://linux.dell.com/firmware-tools
