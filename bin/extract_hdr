@@ -3,7 +3,7 @@
 
   #############################################################################
   #
-  # Copyright (c) 2005 Dell Computer Corporation
+  # Copyright (c) 2005-2007 Dell, Inc.
   # Dual Licenced under GNU GPL and OSL
   #
   #############################################################################
@@ -210,16 +210,19 @@ def main():
 
         global processFunctions, versionArray, unableToProcessStr
         for m in modules:
-            module = __import__(m, globals(), locals(), [])
-            for i in m.split(".")[1:]:
-                module = getattr(module, i)
-            versionArray.append( (m, module.version))
-            if hasattr(module, "processFunctions"):
-                for funcDetails in module.processFunctions:
-                    if not funcDetails.has_key("function"):
-                        funcDetails["function"] = getattr(module, funcDetails["functionName"])
-                    processFunctions.append(funcDetails)
-
+            try:
+                module = __import__(m, globals(), locals(), [])
+                for i in m.split(".")[1:]:
+                    module = getattr(module, i)
+                versionArray.append( (m, module.version))
+                if hasattr(module, "processFunctions"):
+                    for funcDetails in module.processFunctions:
+                        if not funcDetails.has_key("function"):
+                            funcDetails["function"] = getattr(module, funcDetails["functionName"])
+                        processFunctions.append(funcDetails)
+            except:
+                realStderr.write( "Warning: Unable to load module %s" % (m))
+                
         unableToProcessStr = unableToProcessStr % versionArray
 
         outputDir = os.path.realpath(outputDir)
