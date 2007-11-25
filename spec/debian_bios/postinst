@@ -1,5 +1,7 @@
 #!/bin/bash
 
 if [ "$1" == "configure" ]; then
-   dpkg-trigger firmware-tools-update-firmware
+    if ! dpkg-trigger firmware-tools-update-firmware 2>/dev/null; then
+	echo "You must run update_firmware to apply this new firmware."
+    fi
 fi

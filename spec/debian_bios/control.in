@@ -9,7 +9,7 @@ X-Template-Release: 18
 
 Package: %(debian_binpkgname)s
 Architecture: all
-Depends: firmware-addon-dell (>= 0:1.1), firmware-tools (>= 0:1.1), dpkg (>= 1.14.5ubuntu6)
+Depends: firmware-addon-dell (>= 0:1.1), firmware-tools (>= 0:1.1)
 Provides:  %(debian_sourcepkgname)s
 Description: BIOS upgrade package for System: %(shortname)s
  This package contains BIOS update version %(version)s for System %(shortname)s
