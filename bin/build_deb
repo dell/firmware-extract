@@ -194,9 +194,16 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
     os.chdir(cwd)
     
     for topdir, dirlist, filelist in pycompat.walkPath(tmp_dir):
+        doCopy = True
+        # this is nasty.  Avoid overwriting a same-named package in buildDir.
         for f in filelist:
-            shutil.copy2(os.path.join(topdir, f), buildDir)
-	    break
+            if f.endswith('.deb') and os.path.exists(os.path.join(buildDir, f)):
+                doCopy = False
+
+        if doCopy:
+            for f in filelist:
+                shutil.copy2(os.path.join(topdir, f), buildDir)
+            break
         break
 
     shutil.rmtree(tmp_dir)
