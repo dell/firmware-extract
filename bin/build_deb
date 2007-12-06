@@ -35,6 +35,7 @@ import traceback
 import re
 import shutil
 import tempfile
+import string
 
 import firmwaretools.pycompat  as pycompat
 import firmware_addon_dell.HelperXml as HelperXml
@@ -115,6 +116,11 @@ def populateTemplates(debianDir, data):
             if f.endswith('.in'):
                 populateOneTemplate(os.path.join(debianDir, f), data)
 
+def debianCleanVersion(version):
+    if version[0] in string.ascii_letters:
+       version = "0.%s" % version
+    return version
+
 buildString = "BUILT. EXTRACT(%s) BUILD_RPM(%s). SPEC_REVISION(%s)"
 def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
     packageIni = ConfigParser.ConfigParser()
@@ -160,6 +166,9 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
     packageIni.set("package", "debian_sourcepkgname",
 			      debianCleanName(packageIni.get("package", "safe_name")))
 
+    packageIni.set("package", "debian_version",
+			      debianCleanVersion(packageIni.get("package", "version")))
+
     # binary package name is system-bios-inspiron-2300
     packageIni.set("package", "debian_binpkgname", packageIni.get("package", "debian_sourcepkgname"))
     if packageIni.has_option("package", "shortname"):
@@ -186,9 +195,8 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
     shutil.copytree(templateDir, debianDir)
     populateTemplates(debianDir, dict(packageIni.items("package")))
     os.chmod(os.path.join(debianDir, 'rules'), 0755)
-    
     os.chdir(destDir)
-    cmd = "debuild -rfakeroot --check-dirname-level=0 --no-linda --no-lintian -i -us -uc -b"
+    cmd = "debuild -rfakeroot --check-dirname-level=0 --no-linda --no-lintian -us -uc -b"
     if pycompat.executeCommand(cmd):
         raise DebBuildFailed("DEB build command failed.")
     os.chdir(cwd)
