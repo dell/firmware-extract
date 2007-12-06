@@ -1,4 +1,4 @@
-%(debian_sourcepkgname)s (%(version)s-%(revision)s) sid; urgency=low
+%(debian_sourcepkgname)s (%(debian_version)s-%(revision)s) sid; urgency=low
 
   * Automatically packaged release
 
