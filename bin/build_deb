@@ -208,6 +208,7 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
         raise DebBuildFailed("DEB build command failed.")
     os.chdir(cwd)
     
+    madeNewPackage = False
     for topdir, dirlist, filelist in pycompat.walkPath(tmp_dir):
         doCopy = True
         # this is nasty.  Avoid overwriting a same-named package in buildDir.
@@ -216,6 +217,7 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
                 doCopy = False
 
         if doCopy:
+            madeNewPackage = True
             for f in filelist:
                 shutil.copy2(os.path.join(topdir, f), buildDir)
             break
@@ -232,7 +234,7 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
     #packageIni.write(fd)
     #fd.close()
     print "  GOOD."
-
+    return madeNewPackage
 
 forceRebuild = 0
 def main():
@@ -240,6 +242,7 @@ def main():
     buildDir = None
     specDir = None
     forceRebuild = 0
+    madeNewPackage = False
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hi:b:s:f", [
@@ -278,7 +281,7 @@ def main():
         repo = repository.Repository( *packageDirs )
         for pkg in repo.iterLatestPackages():
             try:
-                makeDeb(pkg.path, buildDir, specDir, forceRebuild)
+                madeNewPackage = makeDeb(pkg.path, buildDir, specDir, forceRebuild)
             except (KeyboardInterrupt):
                 raise
             except:
@@ -299,8 +302,9 @@ def main():
             pass
         sys.exit(3)
 
-    return 0 #shell logic
-
+    if madeNewPackage:
+        return 0 #shell logic
+    return 1
 
 
 if __name__ == "__main__":
