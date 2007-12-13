@@ -15,7 +15,7 @@ usage:
 *   -i | --input_dir    dir containing packages
 *   -b | --build_dir    where to build debs (output to deb/noarch/)
 *   -s | --spec_dir     directory containing spec files to use
-
+    -r | --reference <file>  only process dirs in input_dir newer than <file>
 -- Required parameters are denoted by an asterisk (*)
 
 """
@@ -208,7 +208,7 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
         raise DebBuildFailed("DEB build command failed.")
     os.chdir(cwd)
     
-    madeNewPackage = False
+    madeNewPackage = 0
     for topdir, dirlist, filelist in pycompat.walkPath(tmp_dir):
         doCopy = True
         # this is nasty.  Avoid overwriting a same-named package in buildDir.
@@ -217,7 +217,7 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
                 doCopy = False
 
         if doCopy:
-            madeNewPackage = True
+            madeNewPackage = madeNewPackage + 1
             for f in filelist:
                 shutil.copy2(os.path.join(topdir, f), buildDir)
             break
@@ -233,7 +233,7 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
     #fd = open(os.path.join(pkgDir, "package.ini"), "w+")
     #packageIni.write(fd)
     #fd.close()
-    print "  GOOD."
+    print "  GOOD.  %d new packages" % madeNewPackage
     return madeNewPackage
 
 forceRebuild = 0
@@ -242,11 +242,12 @@ def main():
     buildDir = None
     specDir = None
     forceRebuild = 0
-    madeNewPackage = False
+    madeNewPackage = 0
+    referenceFile = None
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:b:s:f", [
-                "help", "input_dir=", "build_dir=", "spec_dir=", "force"
+        opts, args = getopt.getopt(sys.argv[1:], "hi:b:r:s:f", [
+                "help", "input_dir=", "build_dir=", "reference=", "spec_dir=", "force"
             ])
         for option, argument in opts:
             if option in ("-h", "--help"):
@@ -256,12 +257,18 @@ def main():
                 inputDir = os.path.realpath(argument)
             if option in ("-b", "--build_dir"):
                 buildDir = os.path.realpath(argument)
+            if option in ("-r", "--reference"):
+                reference = os.path.realpath(argument)
             if option in ("-s", "--spec_dir"):
                 specDir = os.path.realpath(argument)
             if option in ("-f", "--force"):
                 forceRebuild = 1
 
         if buildDir is None: raise getopt.GetoptError("Need output dir", "")
+
+        referenceMtime = None
+        if reference is not None:
+            referenceMtime = os.stat(reference).st_mtime
 
         oldpwd = os.getcwd()
 
@@ -273,7 +280,8 @@ def main():
         for d in dirsToProcess:
             for topdir, dirlist, filelist in pycompat.walkPath(os.path.join(inputDir,d)):
                 if "package.ini" in filelist:
-                    packageDirs.append(topdir)
+                    if referenceMtime is not None and os.stat(topdir).st_mtime > referenceMtime:
+                        packageDirs.append(topdir)
                     
         # only generate DEBS for the latest one. no use wasting time.
         print "Startup build_deb... reading package configuration..."
@@ -302,8 +310,9 @@ def main():
             pass
         sys.exit(3)
 
-    if madeNewPackage:
-        return 0 #shell logic
+    #shell logic
+    if madeNewPackage > 0:
+        return 0
     return 1
 
 
