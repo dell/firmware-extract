@@ -178,6 +178,13 @@ def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
 	   shortname = "system-bios-%s" % shortname
 	   packageIni.set("package", "debian_binpkgname", debianCleanName(shortname))
 
+    # remove the extra Provides: sourcepkgname  when the package is already named sourcepkgname.
+    # this avoids a lintian/linda warning on duplicate provides.
+    if packageIni.get("package", "debian_sourcepkgname") == packageIni.get("package", "debian_binpkgname"):
+        packageIni.set("package", "debian_provides", '')
+    else:
+        packageIni.set("package", "debian_provides", 'Provides: %s\n' % packageIni.get("package", "debian_sourcepkgname"))
+
     cwd = os.getcwd()
     tmp_dir = tempfile.mkdtemp()
 
