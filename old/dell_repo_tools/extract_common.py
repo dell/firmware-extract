@@ -29,7 +29,7 @@ import sys
 import xml.dom.minidom
 
 import firmware_addon_dell.HelperXml as HelperXml
-from firmwaretools.trace_decorator import dprint, decorateAllFunctions
+from firmwaretools.trace_decorator import decorateAllFunctions
 
 class skip(Exception): pass
 class fubar(Exception): pass
