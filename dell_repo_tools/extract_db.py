@@ -11,7 +11,7 @@ class ProcessedFile(SQLObject):
     status = StringCol()  # "PROCESSED" | "UNPROCESSED"
     name = StringCol()
     size = IntCol()
-    ctime = IntCol
+    ctime = IntCol()
     md5sum = StringCol()
     module = StringCol()
     moduleVersion = StringCol()
