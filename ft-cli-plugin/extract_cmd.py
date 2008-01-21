@@ -67,17 +67,26 @@ class ExtractCommand(ftcommands.YumCommand):
     decorate(traceLog())
     def addSubOptions(self, base, mode, cmdline, processedArgs):
         base.optparser.add_option("--initdb", action="store_true", dest="initdb", default=False, help="Clear and initialize a new, empty extract database.")
+        base.optparser.add_option("--dbpath", action="store", dest="db_path", default=None, help="Override default database path.")
         # parallel
         # force
 
     decorate(traceLog())
+    def doCheck(self, base, mode, cmdline, processedArgs):
+        if base.opts.db_path is not None:
+            conf.db_path = os.path.realpath(base.opts.db_path)
+
+    decorate(traceLog())
     def connect(self, init):
+        if not os.path.exists(conf.db_path):
+            init = True
+
         if init:
             if os.path.exists(conf.db_path):
                 moduleLogVerbose.info("unlinking old db: %s" % conf.db_path)
                 os.unlink(conf.db_path)
     
-            if not os.path.exists(os.path.dirname(conf.db_path)):
+            if os.path.dirname(conf.db_path) and not os.path.exists(os.path.dirname(conf.db_path)):
                 os.makedirs(os.path.dirname(conf.db_path))
 
         moduleLogVerbose.info("Connecting to db at %s" % conf.db_path)
@@ -101,8 +110,9 @@ class ExtractCommand(ftcommands.YumCommand):
 
         return [0, "Done"]
 
-    # {'name': { 'name': name, 'callable': callable, 'version': version }, ... }
+
 def processFile(file):
+    # {'name': { 'name': name, 'callable': callable, 'version': version }, ... }
     # use all extractPlugins to try to process it
     #   -> remove any extractPlugins that were already this ver
     status = "UNPROCESSED"
