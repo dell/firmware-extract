@@ -23,6 +23,7 @@ import inspect
 import os
 import sqlobject
 import stat
+import time
 
 import ftcommands
 import firmwaretools
@@ -49,6 +50,10 @@ def config_hook(conduit, *args, **kargs):
     conf = checkConf(conduit.getConf())
 
 def checkConf(conf):
+    if getattr(conf, "parallel", None) is None:
+        conf.parallel = 8
+    if getattr(conf, "re_extract", None) is None:
+        conf.re_extract = False
     if getattr(conf, "extract_topdir", None) is None:
         conf.extract_topdir = os.path.join(firmwaretools.DATADIR, "firmware", "extract")
     if getattr(conf, "db_path", None) is None:
@@ -68,14 +73,23 @@ class ExtractCommand(ftcommands.YumCommand):
     def addSubOptions(self, base, mode, cmdline, processedArgs):
         base.optparser.add_option("--initdb", action="store_true", dest="initdb", default=False, help="Clear and initialize a new, empty extract database.")
         base.optparser.add_option("--dbpath", action="store", dest="db_path", default=None, help="Override default database path.")
-        base.optparser.add_option("--re-extract", action="store_true", dest="re_extract", default=False, help="Force extract even if pkg has already been extracted once.")
-        # parallel
+        base.optparser.add_option("--re-extract", action="store_true", dest="re_extract", default=None, help="Force extract even if pkg has already been extracted once.")
+        base.optparser.add_option("--extract-topdir", action="store", dest="extract_topdir", default=None, help="Override top-level output directory for extract.")
+        base.optparser.add_option("--extract-parallel", action="store", dest="extract_parallel", default=None, help="Override number of parallel extract instances.")
 
     decorate(traceLog())
     def doCheck(self, base, mode, cmdline, processedArgs):
-        conf.re_extract = base.opts.re_extract
+        if base.opts.extract_parallel is not None:
+            conf.parallel = int(base.opts.extract_parallel)
+
+        if base.opts.re_extract is not None:
+            conf.re_extract = base.opts.re_extract
+
         if base.opts.db_path is not None:
             conf.db_path = os.path.realpath(base.opts.db_path)
+
+        if base.opts.extract_topdir is not None:
+            conf.extract_topdir = os.path.realpath(base.opts.base.opts.extract_topdir)
 
     decorate(traceLog())
     def connect(self, init):
@@ -102,20 +116,47 @@ class ExtractCommand(ftcommands.YumCommand):
         self.connect(base.opts.initdb)
 
         for file in walkFiles(processedArgs):
-            moduleLogVerbose.info("Processing %s" % file)
             if not os.path.exists(file):
                 moduleLogVerbose.critical("File does not exist: %s" % file)
                 continue
 
-            processFile(file)
+            work = generateWork(file, moduleLog)
+            work.append(moduleLog)
+            for res in waitForCompletion(conf.parallel):
+                completeWork(*res)
+            queueWork(doWork, args=work)
 
+        for res in waitForCompletion(0):
+            completeWork(*res)
         return [0, "Done"]
 
+work = []
 
-def processFile(file):
+decorate(traceLog())
+def queueWork(function, args=None, kargs=None):
+    thread = pycompat.BackgroundWorker(function, args, kargs)
+    work.append(thread)
+
+decorate(traceLog())
+def waitForCompletion(running=0, waitLoopFunction=None):
+    while len(work) > running:
+        for t in work:
+            if not t.running:
+                work.remove(t)
+                if t.exception:
+                    raise t.exception
+                yield t.returnCode
+
+        if waitLoopFunction is not None:
+            waitLoopFunction()
+        time.sleep(0.1)
+
+decorate(traceLog())
+def generateWork(file, logger=moduleLogVerbose):
     # {'name': { 'name': name, 'callable': callable, 'version': version }, ... }
     # use all extractPlugins to try to process it
     #   -> remove any extractPlugins that were already this ver
+    logger.info("Processing %s" % file)
     status = "UNPROCESSED"
     pluginsToTry = dict(extractPlugins)
     existing = alreadyProcessed(file)
@@ -124,26 +165,31 @@ def processFile(file):
         status = existing.status
         for key, dic in modules.items():
             if pluginsToTry[key]["version"] == dic["version"]:
-                moduleLogVerbose.info("\talready processed by %s:%s" % (key,dic['version']))
+                logger.info("\talready processed by %s:%s" % (key,dic['version']))
                 del(pluginsToTry[key])
 
     if conf.re_extract:
         pluginsToTry = dict(extractPlugins)
 
+    return [file, status, existing, pluginsToTry]
+
+def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
     class clsStatus(object): pass
     statusObj = clsStatus()
-
     for name, dic in pluginsToTry.items():
-        moduleLogVerbose.info("\trunning plugin %s:%s" % (name, dic['version']))
+        logger.info("\trunning plugin %s:%s" % (name, dic['version']))
         ret = dic['callable'](statusObj, file, conf.extract_topdir, logger)
         if ret:
             status = "PROCESSED: %s" % repr(dic)
+            break
+    return [file, status, existing]
 
+def completeWork(file, status, existing):
     if existing:
         existing.status = status
         existing.modules = repr(sanitizeModuleList(extractPlugins))
     else:
-        addFile(file, status, extractPlugins)
+        addFile(file, status, repr(sanitizeModuleList(extractPlugins)))
 
 # centralized place to set common sqlmeta class details
 class myMeta(sqlobject.sqlmeta):
@@ -177,7 +223,7 @@ def addFile(file, status, modules):
     name, size, ctime, md5sum = fileDetails(file)
     ProcessedFile(
         status=status, name=name, size=size,
-        ctime=ctime, md5sum=md5sum, modules=repr(sanitizeModuleList(modules)))
+        ctime=ctime, md5sum=md5sum, modules=modules)
 
 decorate(traceLog())
 def fileDetails(file):
