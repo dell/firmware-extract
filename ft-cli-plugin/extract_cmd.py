@@ -68,11 +68,12 @@ class ExtractCommand(ftcommands.YumCommand):
     def addSubOptions(self, base, mode, cmdline, processedArgs):
         base.optparser.add_option("--initdb", action="store_true", dest="initdb", default=False, help="Clear and initialize a new, empty extract database.")
         base.optparser.add_option("--dbpath", action="store", dest="db_path", default=None, help="Override default database path.")
+        base.optparser.add_option("--re-extract", action="store_true", dest="re_extract", default=False, help="Force extract even if pkg has already been extracted once.")
         # parallel
-        # force
 
     decorate(traceLog())
     def doCheck(self, base, mode, cmdline, processedArgs):
+        conf.re_extract = base.opts.re_extract
         if base.opts.db_path is not None:
             conf.db_path = os.path.realpath(base.opts.db_path)
 
@@ -126,12 +127,15 @@ def processFile(file):
                 moduleLogVerbose.info("\talready processed by %s:%s" % (key,dic['version']))
                 del(pluginsToTry[key])
 
+    if conf.re_extract:
+        pluginsToTry = dict(extractPlugins)
+
     class clsStatus(object): pass
     statusObj = clsStatus()
 
     for name, dic in pluginsToTry.items():
         moduleLogVerbose.info("\trunning plugin %s:%s" % (name, dic['version']))
-        ret = dic['callable'](statusObj, file, conf.extract_topdir)
+        ret = dic['callable'](statusObj, file, conf.extract_topdir, logger)
         if ret:
             status = "PROCESSED: %s" % repr(dic)
 
