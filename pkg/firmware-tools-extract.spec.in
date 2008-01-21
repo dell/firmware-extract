@@ -20,9 +20,11 @@ License:        GPL style
 URL:            http://linux.dell.com/libsmbios/download/ 
 Source0:        http://linux.dell.com/libsmbios/download/%{name}/%{name}-%{version}/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildArch: noarch
 
 BuildRequires:  python-devel
 Requires: firmware-tools >= 0:2.0
+Requires: python-sqlite2
 
 %description
 placeholder

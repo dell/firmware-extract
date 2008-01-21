@@ -19,15 +19,16 @@
 firmwaretool plugin
 """
 
+import inspect
 import os
 import sqlobject
 import stat
 
-from firmwaretools.trace_decorator import decorate, traceLog, getLog
-import firmwaretools.plugins as plugins
-
 import ftcommands
+import firmwaretools
 import firmwaretools.pycompat as pycompat
+import firmwaretools.plugins as plugins
+from firmwaretools.trace_decorator import decorate, traceLog, getLog
 
 plugin_type = (plugins.TYPE_CLI,)
 requires_api_version = "2.0"
@@ -49,10 +50,8 @@ def config_hook(conduit, *args, **kargs):
 
 def checkConf(conf):
     if getattr(conf, "extract_topdir", None) is None:
-        import firmwaretools
         conf.extract_topdir = os.path.join(firmwaretools.DATADIR, "firmware", "extract")
     if getattr(conf, "db_path", None) is None:
-        import firmwaretools
         conf.db_path = os.path.join(firmwaretools.DATADIR, "firmware", "extract.db")
     return conf
 
@@ -189,7 +188,6 @@ def walkFiles(paths):
 def createTables():
     # fancy pants way to grab all classes in this file
     # that are descendents of SQLObject and run .createTable() on them.
-    import inspect
     tables = [ (key,value) for key, value in globals().items()
             if     inspect.isclass(value)
                and value.__module__==__name__
