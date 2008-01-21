@@ -19,6 +19,6 @@ def config_hook(conduit, *args, **kargs):
         moduleLog.info("failed to register extract module.")
 
 decorate(traceLog())
-def mockExtract(*args, **kargs):
+def mockExtract(statusObj, sourceFile, outputTopdir, *args, **kargs):
     pass
 
