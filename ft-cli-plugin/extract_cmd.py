@@ -117,8 +117,14 @@ def processFile(file):
                 moduleLogVerbose.info("\talready processed by %s:%s" % (key,dic['version']))
                 del(pluginsToTry[key])
 
+    class clsStatus(object): pass
+    statusObj = clsStatus()
+
     for name, dic in pluginsToTry.items():
         moduleLogVerbose.info("\trunning plugin %s:%s" % (name, dic['version']))
+        ret = dic['callable'](statusObj, file, conf.extract_topdir)
+        if ret:
+            status = "PROCESSED: %s" % repr(dic)
 
     if existing:
         existing.status = status
@@ -176,9 +182,9 @@ def walkFiles(paths):
             for topdir, dirlist, filelist in pycompat.walkPath(os.path.realpath(path)):
                 filelist.sort()
                 for file in filelist:
-                    yield os.path.join(topdir, file)
+                    yield os.path.realpath(os.path.join(topdir, file))
         else:
-            yield path
+            yield os.path.realpath(path)
 
 def createTables():
     # fancy pants way to grab all classes in this file
