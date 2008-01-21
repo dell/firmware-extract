@@ -1,0 +1,5 @@
+%(debian_sourcepkgname)s (%(debian_version)s-%(revision)s) sid; urgency=low
+
+  * Automatically packaged release
+
+ -- firmware-tools developers <firmware-tools-devel@lists.us.dell.com>  Tue, 16 Oct 2007 10:27:03 -0500

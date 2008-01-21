@@ -1,0 +1,320 @@
+#!/usr/bin/python
+# vim:expandtab:autoindent:tabstop=4:shiftwidth=4:filetype=python:
+
+  #############################################################################
+  #
+  # Copyright (c) 2005,2007 Dell, Inc.
+  # Dual Licenced under GNU GPLv2 and OSLv1.1
+  #
+  #############################################################################
+"""build_deb: 
+
+usage:
+    -h | --help         print this message
+    -f | --force        where cd is mounted
+*   -i | --input_dir    dir containing packages
+*   -b | --build_dir    where to build debs (output to deb/noarch/)
+*   -s | --spec_dir     directory containing spec files to use
+    -r | --reference <file>  only process dirs in input_dir newer than <file>
+-- Required parameters are denoted by an asterisk (*)
+
+"""
+
+from __future__ import generators
+
+version = "1.6"
+
+# import arranged alphabetically
+import commands
+import getopt
+import glob
+import os
+import sys
+import ConfigParser
+import traceback
+import re
+import shutil
+import tempfile
+import string
+
+import firmwaretools.pycompat  as pycompat
+import firmware_addon_dell.HelperXml as HelperXml
+import firmware_addon_dell.biosHdr   as biosHdr
+import firmwaretools.repository as repository
+
+class NonExistentTemplateDir(Exception): pass
+class DebBuildFailed(Exception): pass
+
+def safemkdir(dest):
+    try:
+        os.makedirs( dest )
+    except OSError: #already exists
+        pass
+
+def getTemplateDir(ini, specDir):
+    specName = ini.get("package", "spec")
+    templateDir = os.path.join(specDir, "debian_%s" % specName)
+    if not os.path.exists(templateDir):
+        raise NonExistentTemplateDir("template dir %s does not exist." % templateDir)
+    return templateDir
+
+def getSpecRelease(templateDir):
+    rel = "0"
+    f = os.path.join(templateDir, "control.in")
+    fd = open(f, "r")
+    while 1:
+        line = fd.readline()
+        if line == "": break
+        if line.startswith("X-Template-Release"):
+            txt, rel = line.split(":",1)
+            rel = rel.strip()
+    fd.close()
+    return rel
+
+def debianCleanName(s):
+    s = s.replace('_', '-')
+    s = s.replace('(', '-')
+    s = s.replace(')', '')
+    s = s.lower()
+    return s
+
+
+def makeTarball(ini, pkgDir, buildDir):
+    pkgName = pkgDir.split('/')[-1:][0]
+    if ini.has_option("package", "rpm_version"):
+        ver = ini.get("package", "rpm_version")
+    else:
+        ver = ini.get("package", "version")
+
+    safeName = debianCleanName(ini.get("package", "safe_name"))
+
+    cwd = os.getcwd()
+    tarballName = "%s_%s.orig.tar.gz" % (safeName, ver)
+    tarballFullPath = os.path.join(buildDir, tarballName)
+    tarballRoot = os.path.join(pkgDir, "..")
+
+    cmd = "tar cvzf %s -C %s %s" % (tarballFullPath, tarballRoot, pkgName)
+    pycompat.executeCommand(cmd)
+    return (tarballFullPath, tarballName, pkgName, safeName, ver)
+
+def populateOneTemplate(f, data):
+    # strip off '.in'
+    outfile = f[:-3]
+    fd = open(f, "r")
+    template = fd.read()
+    fd.close()
+
+    result = template % data
+    outfd = open(outfile, "w")
+    outfd.write(result)
+    outfd.close()
+    os.unlink(f)
+
+def populateTemplates(debianDir, data):
+    for topdir, dirlist, filelist in pycompat.walkPath(debianDir):
+        for f in filelist:
+            if f.endswith('.in'):
+                populateOneTemplate(os.path.join(debianDir, f), data)
+
+def debianCleanVersion(version):
+    if version[0] in string.ascii_letters:
+       version = "0.%s" % version
+    return version
+
+buildString = "BUILT. EXTRACT(%s) BUILD_RPM(%s). SPEC_REVISION(%s)"
+def makeDeb(pkgDir, buildDir, specDir, forceRebuild):
+    packageIni = ConfigParser.ConfigParser()
+    packageIni.read( os.path.join(pkgDir, "package.ini"))
+
+    print "attempt build: %s version %s" % (packageIni.get("package", "name"), packageIni.get("package", "version")),
+    sys.stdout.flush()
+
+    try:
+        templateDir = getTemplateDir(packageIni, specDir)
+        specRelease = getSpecRelease(templateDir)
+        oldSpecRelease = "0"
+        if packageIni.has_option("package", "spec_revision"):
+            oldSpecRelease = packageIni.get("package", "spec_revision")
+    except (NonExistentTemplateDir), e:
+        print "No template directory for module: %s" % packageIni.get("package", "spec")
+        return 0
+
+    extractVersion = packageIni.get("package", "extract_ver")
+
+    # check if any version of anything that contributes to final output has changed.
+    # if any version changes, we rebuild.
+    if not forceRebuild and packageIni.has_option("package", "deb_build"):
+        debBuild = packageIni.get("package", "deb_build")
+        if debBuild == buildString % (extractVersion, version, specRelease):
+            print " Already processed."
+            return 1
+
+    packageIni.set("package", "deb_build", buildString % (extractVersion, version, specRelease))
+
+    # monotonically increasing revision. Every rebuild for whatever reason bumps this.
+    # if package release changes, reset revision to 1
+    revision = 0
+    if packageIni.has_option("package", "revision") and specRelease == oldSpecRelease:
+        revision = packageIni.getint("package", "revision")
+    revision = revision + 1
+
+    packageIni.set("package", "revision", str(revision))
+    packageIni.set("package", "spec_revision", specRelease)
+
+    # other debian naming convention fixups
+    # source package name is system-bios-ven-0xffff-dev-0xffff
+    packageIni.set("package", "debian_sourcepkgname",
+			      debianCleanName(packageIni.get("package", "safe_name")))
+
+    packageIni.set("package", "debian_version",
+			      debianCleanVersion(packageIni.get("package", "version")))
+
+    # binary package name is system-bios-inspiron-2300
+    packageIni.set("package", "debian_binpkgname", packageIni.get("package", "debian_sourcepkgname"))
+    if packageIni.has_option("package", "shortname"):
+        shortname=packageIni.get("package", "shortname")
+	if len(shortname) > 0:
+	   # fixme these aren't all system-bios-
+	   shortname = "system-bios-%s" % shortname
+	   packageIni.set("package", "debian_binpkgname", debianCleanName(shortname))
+
+    # remove the extra Provides: sourcepkgname  when the package is already named sourcepkgname.
+    # this avoids a lintian/linda warning on duplicate provides.
+    if packageIni.get("package", "debian_sourcepkgname") == packageIni.get("package", "debian_binpkgname"):
+        packageIni.set("package", "debian_provides", '')
+    else:
+        packageIni.set("package", "debian_provides", 'Provides: %s\n' % packageIni.get("package", "debian_sourcepkgname"))
+
+    cwd = os.getcwd()
+    tmp_dir = tempfile.mkdtemp()
+
+    tarballFullPath, tarballName, pkgName, safeName, ver = makeTarball( packageIni, pkgDir, tmp_dir )
+
+    os.chdir(tmp_dir)
+
+    destDir = pkgName
+    debianDir = os.path.join(destDir, 'debian')
+
+    cmd = "tar -xzf %s" % tarballName
+    if pycompat.executeCommand(cmd):
+        raise
+
+    shutil.copytree(templateDir, debianDir)
+    populateTemplates(debianDir, dict(packageIni.items("package")))
+    os.chmod(os.path.join(debianDir, 'rules'), 0755)
+    os.chdir(destDir)
+    cmd = "debuild -rfakeroot --check-dirname-level=0 --no-linda --no-lintian -us -uc -b"
+    if pycompat.executeCommand(cmd):
+        raise DebBuildFailed("DEB build command failed.")
+    os.chdir(cwd)
+    
+    madeNewPackage = 0
+    for topdir, dirlist, filelist in pycompat.walkPath(tmp_dir):
+        doCopy = True
+        # this is nasty.  Avoid overwriting a same-named package in buildDir.
+        for f in filelist:
+            if f.endswith('.deb') and os.path.exists(os.path.join(buildDir, f)):
+                doCopy = False
+
+        if doCopy:
+            madeNewPackage = madeNewPackage + 1
+            for f in filelist:
+                shutil.copy2(os.path.join(topdir, f), buildDir)
+            break
+        break
+
+    shutil.rmtree(tmp_dir)
+
+    # in case file is a hardlink, unlink to break it first.
+    #try:
+    #    os.unlink( os.path.join(pkgDir, "package.ini") )
+    #except OSError:  # nonexistent
+    #    pass
+    #fd = open(os.path.join(pkgDir, "package.ini"), "w+")
+    #packageIni.write(fd)
+    #fd.close()
+    print "  GOOD.  %d new packages" % madeNewPackage
+    return madeNewPackage
+
+forceRebuild = 0
+def main():
+    inputDir = None
+    buildDir = None
+    specDir = None
+    forceRebuild = 0
+    madeNewPackage = 0
+    referenceFile = None
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hi:b:r:s:f", [
+                "help", "input_dir=", "build_dir=", "reference=", "spec_dir=", "force"
+            ])
+        for option, argument in opts:
+            if option in ("-h", "--help"):
+                print __doc__
+                sys.exit(0)
+            if option in ("-i", "--input_dir"):
+                inputDir = os.path.realpath(argument)
+            if option in ("-b", "--build_dir"):
+                buildDir = os.path.realpath(argument)
+            if option in ("-r", "--reference"):
+                reference = os.path.realpath(argument)
+            if option in ("-s", "--spec_dir"):
+                specDir = os.path.realpath(argument)
+            if option in ("-f", "--force"):
+                forceRebuild = 1
+
+        if buildDir is None: raise getopt.GetoptError("Need output dir", "")
+
+        referenceMtime = None
+        if reference is not None:
+            referenceMtime = os.stat(reference).st_mtime
+
+        oldpwd = os.getcwd()
+
+        packageDirs = []
+        filteredList = []
+        dirsToProcess=os.listdir(inputDir)
+        dirsToProcess=[d for d in dirsToProcess if os.path.isdir(os.path.join(inputDir,d))]
+
+        for d in dirsToProcess:
+            for topdir, dirlist, filelist in pycompat.walkPath(os.path.join(inputDir,d)):
+                if "package.ini" in filelist:
+                    if referenceMtime is not None and os.stat(topdir).st_mtime > referenceMtime:
+                        packageDirs.append(topdir)
+                    
+        # only generate DEBS for the latest one. no use wasting time.
+        print "Startup build_deb... reading package configuration..."
+        sys.stdout.flush()
+        repo = repository.Repository( *packageDirs )
+        for pkg in repo.iterLatestPackages():
+            try:
+                madeNewPackage = makeDeb(pkg.path, buildDir, specDir, forceRebuild)
+            except (KeyboardInterrupt):
+                raise
+            except:
+                traceback.print_exc()
+                pass
+
+        os.chdir(oldpwd)
+
+    except (getopt.GetoptError):
+        # print help information and exit:
+        print __doc__
+        sys.exit(2)
+
+    except (KeyboardInterrupt):
+        try:
+            os.wait()
+        except OSError:
+            pass
+        sys.exit(3)
+
+    #shell logic
+    if madeNewPackage > 0:
+        return 0
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit( main() )

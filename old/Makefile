@@ -69,7 +69,7 @@
   CLEAN_LIST += $(shell find . -name \*.pyc )
 
   .PHONY: all clean clean_list distclean distclean_list \
-  		rpm unit_test tarball
+		rpm unit_test tarball
 
 SPEC=pkg/$(RELEASE_NAME).spec
 # check that firmware-tools.spec has correct version info. force build if not.
@@ -147,16 +147,30 @@ DEBFILES= \
   build/$(RELEASE_NAME)_$(RELEASE_VERSION).dsc
 
 # use debopts to do things like override maintainer email, etc.
-deb_builddir=build
-deb: $(DEBFILES)
-$(DEBFILES): $(RELEASE_STRING).tar.gz
-	rm -rf $(deb_builddir)
-	mkdir -p $(deb_builddir)
-	tar zxvf $(TARBALL) -C $(deb_builddir)
-	cp $(TARBALL) $(deb_builddir)/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz
-	cp -a pkg/debian $(deb_builddir)/$(RELEASE_STRING)/
-	chmod +x $(deb_builddir)/$(RELEASE_STRING)/debian/rules
-	cd $(deb_builddir)/$(RELEASE_STRING)/ && debuild -rfakeroot $(debsign) $(debopts)
+deb_destdir=$(BUILDDIR)/dist
+deb: tarball
+	mkdir -p $(deb_destdir) ; \
+	tmp_dir=`mktemp -d /tmp/dell-repo-tools.XXXXXXXX` ; \
+	cp $(TARBALL) $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
+	tar -C $${tmp_dir} -xzf $(TARBALL) ; \
+	mv $${tmp_dir}/$(RELEASE_STRING)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
+	chmod +x $${tmp_dir}/$(RELEASE_STRING)/debian/rules ; \
+	cd $${tmp_dir}/$(RELEASE_STRING) ; \
+	pdebuild --use-pdebuild-internal --auto-debsign --buildresult $(deb_destdir) ; \
+	cd - ; \
+	rm -rf $${tmp_dir}
+
+sdeb: tarball
+	mkdir -p $(deb_destdir) ; \
+	tmp_dir=`mktemp -d /tmp/dell-repo-tools.XXXXXXXX` ; \
+	cp $(TARBALL) $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ;\
+	tar -C $${tmp_dir} -xzf $(TARBALL) ; \
+	mv $${tmp_dir}/$(RELEASE_STRING)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
+	chmod +x $${tmp_dir}/$(RELEASE_STRING)/debian/rules ; \
+	cd $${tmp_dir}/$(RELEASE_STRING) ; \
+	dpkg-buildpackage -D -S -sa -rfakeroot ; \
+	mv ../$(RELEASE_NAME)_* $(deb_destdir) ; \
+	cd - ;
 
 rpm: $(RELEASE_STRING)-$(RPM_RELEASE).$(RPM_TYPE).rpm
 $(RELEASE_STRING)-$(RPM_RELEASE).$(RPM_TYPE).rpm: $(RELEASE_STRING).tar.gz
