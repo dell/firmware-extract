@@ -1,46 +1,18 @@
-###################################################################
-#
-# WARNING
-#
-# These are all automatically replaced by the release script.
-# START = Do not edit manually
-%define major 1
-%define minor 4
-%define sub 3
-%define extralevel %{nil}
+%define major @RELEASE_MAJOR@
+%define minor @RELEASE_MINOR@
+%define sub @RELEASE_SUBLEVEL@
+%define extralevel @RELEASE_RPM_EXTRALEVEL@
 %define rpm_release 1
-%define release_name dell-repo-tools
+%define release_name firmware-tools-extract
 %define release_version %{major}.%{minor}.%{sub}%{extralevel}
-#
-# END = Do not edit manually
-#
-###################################################################
 
 # per fedora python packaging guidelines
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 
-#disable empty debuginfo package
-%define debug_package %{nil}
-
-# SUSE 10 has a crazy distutils.cfg that specifies prefix=/usr/local
-# have to override that.
-%define suse_prefix %{nil}
-%if %(test -e /etc/SuSE-release && echo 1 || echo 0)
-%define suse_prefix --prefix=/usr
-%endif
-
-# Compat for RHEL3 build
-%if %(test "%{dist}" == ".el3" && echo 1 || echo 0)
-# needed for RHEL3 build, python-devel doesnt seem to Require: python in RHEL3
-BuildRequires:  python
-# override sitelib because this messes up on x86_64
-%define python_sitelib %{_exec_prefix}/lib/python2.2/site-packages/
-%endif
-
-Name:           dell-repo-tools
+Name:           firmware-tools-extract
 Version:        %{release_version} 
 Release:        %{rpm_release}%{?dist}
-Summary:        Scripts to extract BIOS/Firmware from Dell Update Packages
+Summary:        firmware-tools plugin to add firmware extraction from vendor binaries
 
 Group:          Applications/System
 # License is actually GPL/OSL dual license (GPL Compatible), but rpmlint complains
@@ -49,15 +21,8 @@ URL:            http://linux.dell.com/libsmbios/download/
 Source0:        http://linux.dell.com/libsmbios/download/%{name}/%{name}-%{version}/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-# This package is noarch for everything except RHEL3. Have to build arch
-# specific pkgs for RHEL3
-%if %(test "%{dist}" != ".el3" && echo 1 || echo 0)
-BuildArch:      noarch
-%endif
-
 BuildRequires:  python-devel
-Requires: libsmbios-bin unshield firmware-addon-dell
-Requires: firmware-tools >= 0:1.4
+Requires: firmware-tools >= 0:2.0
 
 %description
 placeholder
@@ -68,12 +33,13 @@ placeholder
 
 
 %build
-%{__python} setup.py build
+%configure
+make -e %{?_smp_mflags} 
 
 
 %install
 rm -rf $RPM_BUILD_ROOT
-%{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT %{suse_prefix}
+make install DESTDIR=%{buildroot} INSTALL="%{__install} -p"
 
  
 %clean
@@ -84,8 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc COPYING-GPL COPYING-OSL README
 %{python_sitelib}/*
-%{_datadir}/firmware/spec
-%attr(0755,root,root) %{_bindir}/*
+%{_datadir}/firmware-tools/plugins/*
+%{_sysconfdir}/firmware/firmware.d/*.conf
+#%attr(0755,root,root) %{_bindir}/*
 
 
 %changelog

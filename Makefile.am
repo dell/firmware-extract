@@ -3,11 +3,16 @@
 include Makefile-std
 
 pkgconfdir = $(sysconfdir)/firmware/firmware.d/
-pkgconf_DATA = pkg/dell-repo.conf
+dist_pkgconf_DATA = pkg/firmware-tools-extract.conf
 
-EXTRA_DIST += doc test COPYING-GPL COPYING-OSL
+EXTRA_DIST += COPYING-GPL COPYING-OSL
 
 pkgpython_PYTHON = \
-	dell_repo_tools/__init__.py 
+	firmware_tools_extract/__init__.py 	\
+	firmware_tools_extract/mockextract.py 
+
+clidir = $(datadir)/firmware-tools/plugins/
+cli_PYTHON = \
+	ft-cli-plugin/extract_cmd.py
 
 REPLACE_VARS_ON_INSTALL= 
