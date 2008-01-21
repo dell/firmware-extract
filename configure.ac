@@ -71,8 +71,8 @@ echo "PACKAGE_VERSION='$PACKAGE_VERSION'" >> version
 echo "PACKAGE_STRING='$PACKAGE_STRING'" >> version
 
 # historical pkg oddity: package name cannot contain '-', so we have to fix it
-pkgpythondir=\${pythondir}/dell_repo_tools
-pkgpyexecdir=\${pyexecdir}/dell_repo_tools
+pkgpythondir=\${pythondir}/firmware_tools_extract
+pkgpyexecdir=\${pyexecdir}/firmware_tools_extract
 
 # generate files and exit
 AC_CONFIG_FILES([ Makefile pkg/${PACKAGE_NAME}.spec ])
