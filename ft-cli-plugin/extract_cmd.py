@@ -20,6 +20,7 @@ firmwaretool plugin
 """
 
 import inspect
+import logging
 import os
 import sqlobject
 import stat
@@ -49,15 +50,26 @@ def config_hook(conduit, *args, **kargs):
     global conf
     conf = checkConf(conduit.getConf())
 
+true_vals = ("1", "true", "yes", "on")
 def checkConf(conf):
-    if getattr(conf, "parallel", None) is None:
-        conf.parallel = 8
+    if getattr(conf, "separate_logs", None) is None:
+        conf.separate_logs = True
+    else:
+        conf.separate_logs = (conf.separate_logs.lower() in true_vals)
+
     if getattr(conf, "re_extract", None) is None:
         conf.re_extract = False
+    else:
+        conf.separate_logs = (conf.separate_logs.lower() in true_vals)
+
+    if getattr(conf, "parallel", None) is None:
+        conf.parallel = 8
     if getattr(conf, "extract_topdir", None) is None:
         conf.extract_topdir = os.path.join(firmwaretools.DATADIR, "firmware", "extract")
     if getattr(conf, "db_path", None) is None:
         conf.db_path = os.path.join(firmwaretools.DATADIR, "firmware", "extract.db")
+    if getattr(conf, "log_path", None) is None:
+        conf.log_path = os.path.join(firmwaretools.DATADIR, "firmware", "extract", "log")
     return conf
 
 decorate(traceLog())
@@ -76,9 +88,14 @@ class ExtractCommand(ftcommands.YumCommand):
         base.optparser.add_option("--re-extract", action="store_true", dest="re_extract", default=None, help="Force extract even if pkg has already been extracted once.")
         base.optparser.add_option("--extract-topdir", action="store", dest="extract_topdir", default=None, help="Override top-level output directory for extract.")
         base.optparser.add_option("--extract-parallel", action="store", dest="extract_parallel", default=None, help="Override number of parallel extract instances.")
+        base.optparser.add_option("--extract-log-path", action="store", dest="extract_log_path", default=None, help="Override extract log directory.")
+        base.optparser.add_option("--extract-separate-logs", action="store_true", dest="extract_separate_logs", default=None, help="Dont write separate log files for each file.")
 
     decorate(traceLog())
     def doCheck(self, base, mode, cmdline, processedArgs):
+        if base.opts.extract_separate_logs is not None:
+            conf.separate_logs = base.opts.extract_separate_logs
+
         if base.opts.extract_parallel is not None:
             conf.parallel = int(base.opts.extract_parallel)
 
@@ -89,7 +106,10 @@ class ExtractCommand(ftcommands.YumCommand):
             conf.db_path = os.path.realpath(base.opts.db_path)
 
         if base.opts.extract_topdir is not None:
-            conf.extract_topdir = os.path.realpath(base.opts.base.opts.extract_topdir)
+            conf.extract_topdir = os.path.realpath(base.opts.extract_topdir)
+
+        if base.opts.extract_log_path is not None:
+            conf.log_path = os.path.realpath(base.opts.extract_log_path)
 
     decorate(traceLog())
     def connect(self, init):
@@ -120,15 +140,33 @@ class ExtractCommand(ftcommands.YumCommand):
                 moduleLogVerbose.critical("File does not exist: %s" % file)
                 continue
 
-            work = generateWork(file, moduleLog)
-            work.append(moduleLog)
+            logger = getLogger(file)
+            work = generateWork(file, logger)
+            work.append(logger)
             for res in waitForCompletion(conf.parallel):
                 completeWork(*res)
-            queueWork(doWork, args=work)
+            if conf.parallel > 1:
+                queueWork(doWork, args=work)
+            else:
+                res = doWork(*work)
+                completeWork(*res)
 
         for res in waitForCompletion(0):
             completeWork(*res)
         return [0, "Done"]
+
+decorate(traceLog())
+def getLogger(file):
+    log = getLog("verbose.extract.%s" % os.path.basename(file))
+    logfile = os.path.join(conf.log_path, os.path.basename(file))
+    if conf.separate_logs:
+        log.propagate=0
+        fh = logging.FileHandler(logfile, "a+")
+        formatter = logging.Formatter("%(message)s")
+        fh.setFormatter(formatter)
+        fh.setLevel(logging.NOTSET)
+        log.addHandler(fh)
+    return log
 
 work = []
 
