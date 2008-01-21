@@ -4,9 +4,9 @@
 
 ####################################
 # change version here.
-AC_INIT([dell-repo-tools],[2.0.0])
+AC_INIT([firmware-tools-extract],[2.0.0])
 
-temp_RELEASE_NAME=dell-repo-tools
+temp_RELEASE_NAME=firmware-tools-extract
 temp_RELEASE_MAJOR=2
 temp_RELEASE_MINOR=0
 temp_RELEASE_SUBLEVEL=0

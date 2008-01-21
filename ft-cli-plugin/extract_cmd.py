@@ -27,7 +27,6 @@ from firmwaretools.trace_decorator import decorate, traceLog, getLog
 import firmwaretools.plugins as plugins
 
 import ftcommands
-import dell_repo_tools.extract_db as extract_db
 import firmwaretools.pycompat as pycompat
 
 plugin_type = (plugins.TYPE_CLI,)
@@ -36,7 +35,9 @@ requires_api_version = "2.0"
 moduleLog = getLog()
 moduleLogVerbose = getLog(prefix="verbose.")
 
+extractPlugins = {}
 conf = None
+
 def config_hook(conduit, *args, **kargs):
     conduit.getOptParser().addEarlyParse("--extract")
     conduit.getOptParser().add_option(
@@ -55,6 +56,10 @@ def checkConf(conf):
         conf.db_path = os.path.join(firmwaretools.DATADIR, "firmware", "extract.db")
     return conf
 
+decorate(traceLog())
+def registerPlugin(name, callable, version):
+    extractPlugins[name] = { 'name': name, 'callable': callable, 'version': version }
+
 class ExtractCommand(ftcommands.YumCommand):
     decorate(traceLog())
     def getModes(self):
@@ -67,24 +72,25 @@ class ExtractCommand(ftcommands.YumCommand):
         # force
 
     decorate(traceLog())
-    def initDb(self):
-        if os.path.exists(conf.db_path):
-            moduleLogVerbose.info("unlinking old db: %s" % conf.db_path)
-            os.unlink(conf.db_path)
+    def connect(self, init):
+        if init:
+            if os.path.exists(conf.db_path):
+                moduleLogVerbose.info("unlinking old db: %s" % conf.db_path)
+                os.unlink(conf.db_path)
+    
+            if not os.path.exists(os.path.dirname(conf.db_path)):
+                os.makedirs(os.path.dirname(conf.db_path))
 
-        if not os.path.exists(os.path.dirname(conf.db_path)):
-            os.makedirs(os.path.dirname(conf.db_path))
-
-        moduleLogVerbose.info("Initializing db at %s" % conf.db_path)
+        moduleLogVerbose.info("Connecting to db at %s" % conf.db_path)
         sqlobject.sqlhub.processConnection = sqlobject.connectionForURI(
                 'sqlite://%s' % conf.db_path)
-        extract_db.createTables()
 
+        if init:
+            createTables()
 
     decorate(traceLog())
     def doCommand(self, base, mode, cmdline, processedArgs):
-        if base.opts.initdb:
-            self.initDb()
+        self.connect(base.opts.initdb)
 
         for file in walkFiles(processedArgs):
             moduleLogVerbose.info("Processing %s" % file)
@@ -92,30 +98,67 @@ class ExtractCommand(ftcommands.YumCommand):
                 moduleLogVerbose.critical("File does not exist: %s" % file)
                 continue
 
-            # check already processed
-            status = "unprocessed"
-            module = None
-            moduleVersion = None
-            if not alreadyProcessed(file):
-                # extract()
-                # add to db
-                addFile(file, status, module, moduleVersion)
+            processFile(file)
 
         return [0, "Done"]
+
+    # {'name': { 'name': name, 'callable': callable, 'version': version }, ... }
+def processFile(file):
+    # use all extractPlugins to try to process it
+    #   -> remove any extractPlugins that were already this ver
+    status = "UNPROCESSED"
+    pluginsToTry = dict(extractPlugins)
+    existing = alreadyProcessed(file)
+    if existing is not None:
+        modules = eval(existing.modules)
+        status = existing.status
+        for key, dic in modules.items():
+            if pluginsToTry[key]["version"] == dic["version"]:
+                moduleLogVerbose.info("\talready processed by %s:%s" % (key,dic['version']))
+                del(pluginsToTry[key])
+
+    for name, dic in pluginsToTry.items():
+        moduleLogVerbose.info("\trunning plugin %s:%s" % (name, dic['version']))
+
+    if existing:
+        existing.status = status
+        existing.modules = repr(sanitizeModuleList(extractPlugins))
+    else:
+        addFile(file, status, extractPlugins)
+
+# centralized place to set common sqlmeta class details
+class myMeta(sqlobject.sqlmeta):
+    lazyUpdate = False
+
+class ProcessedFile(sqlobject.SQLObject):
+    class sqlmeta(myMeta): pass
+    status = sqlobject.StringCol()  # "PROCESSED" | "UNPROCESSED"
+    name = sqlobject.StringCol()
+    size = sqlobject.IntCol()
+    ctime = sqlobject.IntCol()
+    md5sum = sqlobject.StringCol()
+    modules = sqlobject.StringCol()
 
 decorate(traceLog())
 def alreadyProcessed(file):
     name, size, ctime, md5sum = fileDetails(file)
-    if extract_db.ProcessedFile.select(extract_db.ProcessedFile.name == name).count() > 0:
-        return True
-    return False
+    for file in ProcessedFile.selectBy( name=name, size=size ):
+        return file
+    return None
 
 decorate(traceLog())
-def addFile(file, status, module, moduleVersion):
+def sanitizeModuleList(modules):
+    myModules = {}
+    for modName, dets in modules.items():
+        myModules[modName] = {'name': dets['name'], 'version': dets['version']}
+    return myModules
+
+decorate(traceLog())
+def addFile(file, status, modules):
     name, size, ctime, md5sum = fileDetails(file)
-    extract_db.ProcessedFile(
+    ProcessedFile(
         status=status, name=name, size=size,
-        ctime=ctime, md5sum=md5sum, module=module, moduleVersion=moduleVersion)
+        ctime=ctime, md5sum=md5sum, modules=repr(sanitizeModuleList(modules)))
 
 decorate(traceLog())
 def fileDetails(file):
@@ -133,8 +176,22 @@ def walkFiles(paths):
             for topdir, dirlist, filelist in pycompat.walkPath(os.path.realpath(path)):
                 filelist.sort()
                 for file in filelist:
-                    yield file
+                    yield os.path.join(topdir, file)
         else:
             yield path
 
+def createTables():
+    # fancy pants way to grab all classes in this file
+    # that are descendents of SQLObject and run .createTable() on them.
+    import inspect
+    tables = [ (key,value) for key, value in globals().items()
+            if     inspect.isclass(value)
+               and value.__module__==__name__
+         ]
+
+    toCreate = [ (key, value) for key, value in tables if
+               issubclass(value, sqlobject.SQLObject) ]
+
+    for name,clas in toCreate:
+        clas.createTable(ifNotExists=True, createJoinTables=False)
 
