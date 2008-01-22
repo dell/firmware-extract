@@ -60,7 +60,7 @@ def checkConf(conf):
     if getattr(conf, "re_extract", None) is None:
         conf.re_extract = False
     else:
-        conf.separate_logs = (conf.separate_logs.lower() in true_vals)
+        conf.re_extract = (conf.re_extract.lower() in true_vals)
 
     if getattr(conf, "parallel", None) is None:
         conf.parallel = 8
@@ -89,12 +89,12 @@ class ExtractCommand(ftcommands.YumCommand):
         base.optparser.add_option("--extract-topdir", action="store", dest="extract_topdir", default=None, help="Override top-level output directory for extract.")
         base.optparser.add_option("--extract-parallel", action="store", dest="extract_parallel", default=None, help="Override number of parallel extract instances.")
         base.optparser.add_option("--extract-log-path", action="store", dest="extract_log_path", default=None, help="Override extract log directory.")
-        base.optparser.add_option("--extract-separate-logs", action="store_true", dest="extract_separate_logs", default=None, help="Dont write separate log files for each file.")
+        base.optparser.add_option("--extract-separate-logs", action="store", dest="extract_separate_logs", default=None, help="Dont write separate log files for each file.", metavar="BOOLEAN")
 
     decorate(traceLog())
     def doCheck(self, base, mode, cmdline, processedArgs):
         if base.opts.extract_separate_logs is not None:
-            conf.separate_logs = base.opts.extract_separate_logs
+            conf.separate_logs = (base.opts.extract_separate_logs in true_vals)
 
         if base.opts.extract_parallel is not None:
             conf.parallel = int(base.opts.extract_parallel)
@@ -103,13 +103,13 @@ class ExtractCommand(ftcommands.YumCommand):
             conf.re_extract = base.opts.re_extract
 
         if base.opts.db_path is not None:
-            conf.db_path = os.path.realpath(base.opts.db_path)
+            conf.db_path = os.path.realpath(os.path.expanduser(base.opts.db_path))
 
         if base.opts.extract_topdir is not None:
-            conf.extract_topdir = os.path.realpath(base.opts.extract_topdir)
+            conf.extract_topdir = os.path.realpath(os.path.expanduser(base.opts.extract_topdir))
 
         if base.opts.extract_log_path is not None:
-            conf.log_path = os.path.realpath(base.opts.extract_log_path)
+            conf.log_path = os.path.realpath(os.path.expanduser(base.opts.extract_log_path))
 
     decorate(traceLog())
     def connect(self, init):
@@ -159,13 +159,25 @@ decorate(traceLog())
 def getLogger(file):
     log = getLog("verbose.extract.%s" % os.path.basename(file))
     logfile = os.path.join(conf.log_path, os.path.basename(file))
-    if conf.separate_logs:
-        log.propagate=0
-        fh = logging.FileHandler(logfile, "a+")
+    # make sure we dont re-add multiple handlers logging to same file
+    add=1
+    for h in log.handlers:
+        try:
+            if h.baseFilename == logfile:
+                add=0
+        except AttributeError:
+            pass
+
+    if conf.separate_logs and add:
+        if not os.path.exists(conf.log_path):
+            os.makedirs(conf.log_path)
+
+        fh = logging.FileHandler(logfile, "w")
         formatter = logging.Formatter("%(message)s")
         fh.setFormatter(formatter)
         fh.setLevel(logging.NOTSET)
         log.addHandler(fh)
+
     return log
 
 work = []
