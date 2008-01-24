@@ -223,15 +223,28 @@ def generateWork(file, logger=moduleLogVerbose):
 
     return [file, status, existing, pluginsToTry]
 
+class clsStatus(object):
+    def __init__(self, file, status, logger):
+        self.file = file
+        self.logger = logger
+        self.status = status
+        self.finalFuncs = []
+    def finalize(self, status):
+        for func in self.finalFuncs:
+            func(self, status)
+
 def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
-    class clsStatus(object): pass
-    statusObj = clsStatus()
-    for name, dic in pluginsToTry.items():
-        logger.info("\trunning plugin %s:%s" % (name, dic['version']))
-        ret = dic['callable'](statusObj, file, conf.extract_topdir, logger)
-        if ret:
-            status = "PROCESSED: %s" % repr(dic)
-            break
+    statusObj = clsStatus(file, status, logger)
+    try:
+        for name, dic in pluginsToTry.items():
+            logger.info("\trunning plugin %s:%s" % (name, dic['version']))
+            ret = dic['callable'](statusObj, conf.extract_topdir, logger)
+            if ret:
+                status = "PROCESSED: %s" % repr(dic)
+                break
+    finally:
+        statusObj.finalize(status)
+
     return [file, status, existing]
 
 def completeWork(file, status, existing):
