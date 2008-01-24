@@ -218,7 +218,7 @@ def generateWork(file, logger=moduleLog):
             if pluginsToTry.get(key) is None:
                 continue
             if pluginsToTry[key]["version"] == dic["version"]:
-                logger.debug("already processed by %s:%s" % (key,dic['version']))
+                logger.info("already processed by %s:%s" % (key,dic['version']))
                 del(pluginsToTry[key])
 
     if conf.re_extract:
