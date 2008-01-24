@@ -214,6 +214,8 @@ def generateWork(file, logger=moduleLogVerbose):
         modules = eval(existing.modules)
         status = existing.status
         for key, dic in modules.items():
+            if pluginsToTry.get(key) is None:
+                continue
             if pluginsToTry[key]["version"] == dic["version"]:
                 logger.info("\talready processed by %s:%s" % (key,dic['version']))
                 del(pluginsToTry[key])
