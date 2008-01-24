@@ -137,9 +137,10 @@ class ExtractCommand(ftcommands.YumCommand):
 
         for file in walkFiles(processedArgs):
             if not os.path.exists(file):
-                moduleLogVerbose.critical("File does not exist: %s" % file)
+                moduleLog.critical("File does not exist: %s" % file)
                 continue
 
+            moduleLog.info("Processing %s" % file)
             logger = getLogger(file)
             work = generateWork(file, logger)
             work.append(logger)
@@ -202,11 +203,11 @@ def waitForCompletion(running=0, waitLoopFunction=None):
         time.sleep(0.1)
 
 decorate(traceLog())
-def generateWork(file, logger=moduleLogVerbose):
+def generateWork(file, logger=moduleLog):
     # {'name': { 'name': name, 'callable': callable, 'version': version }, ... }
     # use all extractPlugins to try to process it
     #   -> remove any extractPlugins that were already this ver
-    logger.info("Processing %s" % file)
+    logger.debug("Processing %s" % file)
     status = "UNPROCESSED"
     pluginsToTry = dict(extractPlugins)
     existing = alreadyProcessed(file)
@@ -217,7 +218,7 @@ def generateWork(file, logger=moduleLogVerbose):
             if pluginsToTry.get(key) is None:
                 continue
             if pluginsToTry[key]["version"] == dic["version"]:
-                logger.info("\talready processed by %s:%s" % (key,dic['version']))
+                logger.debug("already processed by %s:%s" % (key,dic['version']))
                 del(pluginsToTry[key])
 
     if conf.re_extract:
@@ -239,11 +240,14 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
     statusObj = clsStatus(file, status, logger)
     try:
         for name, dic in pluginsToTry.items():
-            logger.info("\trunning plugin %s:%s" % (name, dic['version']))
-            ret = dic['callable'](statusObj, conf.extract_topdir, logger)
-            if ret:
-                status = "PROCESSED: %s" % repr(dic)
-                break
+            logger.info("running plugin %s:%s" % (name, dic['version']))
+            try:
+                ret = dic['callable'](statusObj, conf.extract_topdir, logger)
+                if ret:
+                    status = "PROCESSED: %s" % repr(dic)
+                    break
+            except Exception, e:
+                logger.debug(str(e))
     finally:
         statusObj.finalize(status)
 
