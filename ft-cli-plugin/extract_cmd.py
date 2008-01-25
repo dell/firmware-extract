@@ -42,6 +42,9 @@ moduleLogVerbose = getLog(prefix="verbose.")
 extractPlugins = {}
 conf = None
 
+plugins.registerSlotToConduit('extract_addSubOptions', 'PluginConduit')
+plugins.registerSlotToConduit('extract_doCheck', 'PluginConduit')
+
 def config_hook(conduit, *args, **kargs):
     conduit.getOptParser().addEarlyParse("--extract")
     conduit.getOptParser().add_option(
@@ -88,10 +91,12 @@ class ExtractCommand(ftcommands.YumCommand):
         base.optparser.add_option("--initdb", action="store_true", dest="initdb", default=False, help="Clear and initialize a new, empty extract database.")
         base.optparser.add_option("--dbpath", action="store", dest="db_path", default=None, help="Override default database path.")
         base.optparser.add_option("--re-extract", action="store_true", dest="re_extract", default=None, help="Force extract even if pkg has already been extracted once.")
-        base.optparser.add_option("--extract-topdir", action="store", dest="extract_topdir", default=None, help="Override top-level output directory for extract.")
-        base.optparser.add_option("--extract-parallel", action="store", dest="extract_parallel", default=None, help="Override number of parallel extract instances.")
-        base.optparser.add_option("--extract-log-path", action="store", dest="extract_log_path", default=None, help="Override extract log directory.")
-        base.optparser.add_option("--extract-separate-logs", action="store", dest="extract_separate_logs", default=None, help="Dont write separate log files for each file.", metavar="BOOLEAN")
+        base.optparser.add_option("--outputdir", action="store", dest="extract_topdir", default=None, help="Override top-level output directory for extract.")
+        base.optparser.add_option("--parallel", action="store", dest="extract_parallel", default=None, help="Override number of parallel extract instances.")
+        base.optparser.add_option("--log-path", action="store", dest="extract_log_path", default=None, help="Override extract log directory.")
+        base.optparser.add_option("--separate-logs", action="store", dest="extract_separate_logs", default=None, help="Dont write separate log files for each file.", metavar="BOOLEAN")
+
+        base.plugins.run("extract_addSubOptions")
 
     decorate(traceLog())
     def doCheck(self, base, mode, cmdline, processedArgs):
@@ -112,6 +117,8 @@ class ExtractCommand(ftcommands.YumCommand):
 
         if base.opts.extract_log_path is not None:
             conf.log_path = os.path.realpath(os.path.expanduser(base.opts.extract_log_path))
+
+        base.plugins.run("extract_doCheck")
 
     decorate(traceLog())
     def connect(self, init):
@@ -256,6 +263,8 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
                 moduleLog.warning(str(e))
             except fte.InfoExc, e:
                 logger.info(str(e))
+            except fte.DebugExc, e:
+                logger.debug(str(e))
             except Exception, e:
                 logger.exception(e)
                 moduleLog.exception(str(e))
