@@ -27,6 +27,7 @@ import stat
 import time
 
 import ftcommands
+import firmware_tools_extract as fte
 import firmwaretools
 import firmwaretools.pycompat as pycompat
 import firmwaretools.plugins as plugins
@@ -73,7 +74,8 @@ def checkConf(conf):
     return conf
 
 decorate(traceLog())
-def registerPlugin(name, callable, version):
+def registerPlugin(callable, version, **kargs):
+    name = kargs.get("name", callable.__name__)
     extractPlugins[name] = { 'name': name, 'callable': callable, 'version': version }
 
 class ExtractCommand(ftcommands.YumCommand):
@@ -246,8 +248,17 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
                 if ret:
                     status = "PROCESSED: %s" % repr(dic)
                     break
+            except fte.CritExc, e:
+                logger.exception(e)
+                moduleLog.critical(str(e))
+            except fte.WarnExc, e:
+                logger.warning(str(e))
+                moduleLog.warning(str(e))
+            except fte.InfoExc, e:
+                logger.info(str(e))
             except Exception, e:
-                logger.debug(str(e))
+                logger.exception(e)
+                moduleLog.exception(str(e))
     finally:
         statusObj.finalize(status)
 

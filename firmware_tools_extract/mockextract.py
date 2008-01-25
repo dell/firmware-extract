@@ -14,7 +14,7 @@ def config_hook(conduit, *args, **kargs):
     # try/except in case extract plugin not installed
     try:
         import extract_cmd
-        extract_cmd.registerPlugin('mock', mockExtract, __VERSION__)
+        extract_cmd.registerPlugin(mockExtract, __VERSION__)
     except ImportError, e:
         moduleLog.info("failed to register extract module.")
 
