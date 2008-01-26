@@ -4,9 +4,9 @@
 
 ####################################
 # change version here.
-AC_INIT([firmware-tools-extract],[2.0.0])
+AC_INIT([firmware-extract],[2.0.0])
 
-temp_RELEASE_NAME=firmware-tools-extract
+temp_RELEASE_NAME=firmware-extract
 temp_RELEASE_MAJOR=2
 temp_RELEASE_MINOR=0
 temp_RELEASE_SUBLEVEL=0
@@ -71,8 +71,8 @@ echo "PACKAGE_VERSION='$PACKAGE_VERSION'" >> version
 echo "PACKAGE_STRING='$PACKAGE_STRING'" >> version
 
 # historical pkg oddity: package name cannot contain '-', so we have to fix it
-pkgpythondir=\${pythondir}/firmware_tools_extract
-pkgpyexecdir=\${pyexecdir}/firmware_tools_extract
+pkgpythondir=\${pythondir}/firmware_extract
+pkgpyexecdir=\${pyexecdir}/firmware_extract
 
 # generate files and exit
 AC_CONFIG_FILES([ Makefile pkg/${PACKAGE_NAME}.spec ])

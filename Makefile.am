@@ -3,13 +3,13 @@
 include Makefile-std
 
 pkgconfdir = $(sysconfdir)/firmware/firmware.d/
-dist_pkgconf_DATA = pkg/firmware-tools-extract.conf
+dist_pkgconf_DATA = pkg/firmware-extract.conf
 
 EXTRA_DIST += COPYING-GPL COPYING-OSL
 
 pkgpython_PYTHON = \
-	firmware_tools_extract/__init__.py 	\
-	firmware_tools_extract/mockextract.py 
+	firmware_extract/__init__.py 	\
+	firmware_extract/mockextract.py 
 
 clidir = $(datadir)/firmware-tools/plugins/
 cli_PYTHON = \

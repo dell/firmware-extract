@@ -27,7 +27,7 @@ import stat
 import time
 
 import ftcommands
-import firmware_tools_extract as fte
+import firmware_extract as fe
 import firmwaretools
 import firmwaretools.pycompat as pycompat
 import firmwaretools.plugins as plugins
@@ -258,15 +258,15 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
                     moduleLog.info("%s: %s" % (pad(dic['name'],30), os.path.basename(file)))
                     status = "PROCESSED: %s" % repr(dic)
                     break
-            except fte.CritExc, e:
+            except fe.CritExc, e:
                 logger.exception(e)
                 moduleLog.critical(str(e))
-            except fte.WarnExc, e:
+            except fe.WarnExc, e:
                 logger.warning(str(e))
                 moduleLog.warning(str(e))
-            except fte.InfoExc, e:
+            except fe.InfoExc, e:
                 logger.info(str(e))
-            except fte.DebugExc, e:
+            except fe.DebugExc, e:
                 logger.debug(str(e))
             except Exception, e:
                 logger.exception(e)
