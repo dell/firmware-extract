@@ -68,12 +68,7 @@ def checkConf(conf):
 
     if getattr(conf, "parallel", None) is None:
         conf.parallel = 8
-    if getattr(conf, "extract_topdir", None) is None:
-        conf.extract_topdir = os.path.join(firmwaretools.DATADIR, "firmware", "extract")
-    if getattr(conf, "db_path", None) is None:
-        conf.db_path = os.path.join(firmwaretools.DATADIR, "firmware", "extract.db")
-    if getattr(conf, "log_path", None) is None:
-        conf.log_path = os.path.join(firmwaretools.DATADIR, "firmware", "extract", "log")
+
     return conf
 
 decorate(traceLog())
@@ -109,14 +104,21 @@ class ExtractCommand(ftcommands.YumCommand):
         if base.opts.re_extract is not None:
             conf.re_extract = base.opts.re_extract
 
-        if base.opts.db_path is not None:
-            conf.db_path = os.path.realpath(os.path.expanduser(base.opts.db_path))
-
         if base.opts.extract_topdir is not None:
             conf.extract_topdir = os.path.realpath(os.path.expanduser(base.opts.extract_topdir))
+        if getattr(conf, "extract_topdir", None) is None:
+            conf.extract_topdir = os.path.join(firmwaretools.DATADIR, "firmware", "extract")
+
+        if base.opts.db_path is not None:
+            conf.db_path = os.path.realpath(os.path.expanduser(base.opts.db_path))
+        if getattr(conf, "db_path", None) is None:
+            conf.db_path = os.path.join(conf.extract_topdir, "db")
 
         if base.opts.extract_log_path is not None:
             conf.log_path = os.path.realpath(os.path.expanduser(base.opts.extract_log_path))
+        if getattr(conf, "log_path", None) is None:
+            conf.log_path = os.path.join(conf.extract_topdir, "log")
+
 
         base.plugins.run("extract_doCheck")
 
