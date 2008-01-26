@@ -149,7 +149,6 @@ class ExtractCommand(ftcommands.YumCommand):
                 moduleLog.critical("File does not exist: %s" % file)
                 continue
 
-            moduleLog.info("Processing %s" % file)
             logger = getLogger(file)
             work = generateWork(file, logger)
             work.append(logger)
@@ -168,7 +167,7 @@ class ExtractCommand(ftcommands.YumCommand):
 decorate(traceLog())
 def getLogger(file):
     log = getLog("verbose.extract.%s" % os.path.basename(file))
-    logfile = os.path.join(conf.log_path, os.path.basename(file))
+    logfile = os.path.realpath(os.path.join(conf.log_path, os.path.basename(file)))
     # make sure we dont re-add multiple handlers logging to same file
     add=1
     for h in log.handlers:
@@ -245,6 +244,9 @@ class clsStatus(object):
         for func in self.finalFuncs:
             func(self, status)
 
+def pad(s, n):
+    return s[:n] + ' ' * (n-len(s))
+
 def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
     statusObj = clsStatus(file, status, logger)
     try:
@@ -253,6 +255,7 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
             try:
                 ret = dic['callable'](statusObj, conf.extract_topdir, logger)
                 if ret:
+                    moduleLog.info("%s: %s" % (pad(dic['name'],30), os.path.basename(file)))
                     status = "PROCESSED: %s" % repr(dic)
                     break
             except fte.CritExc, e:
@@ -279,6 +282,9 @@ def completeWork(file, status, existing):
         existing.modules = repr(sanitizeModuleList(extractPlugins))
     else:
         addFile(file, status, repr(sanitizeModuleList(extractPlugins)))
+
+    if not status.lower().startswith("processed"):
+        moduleLog.info("%s: %s" % (pad("  unprocessed  ", 30), os.path.basename(file)))
 
 # centralized place to set common sqlmeta class details
 class myMeta(sqlobject.sqlmeta):
