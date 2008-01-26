@@ -255,8 +255,7 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
             try:
                 ret = dic['callable'](statusObj, conf.extract_topdir, logger)
                 if ret:
-                    moduleLog.info("%s: %s" % (pad(dic['name'],30), os.path.basename(file)))
-                    status = "PROCESSED: %s" % repr(dic)
+                    status = "PROCESSED: %s" % repr({'name': dic['name'], 'version':dic['version']})
                     break
             except fe.CritExc, e:
                 logger.exception(e)
@@ -277,14 +276,22 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
     return [file, status, existing]
 
 def completeWork(file, status, existing):
+    asterisk=""
     if existing:
+        if existing.status == status:
+            asterisk="*"
         existing.status = status
         existing.modules = repr(sanitizeModuleList(extractPlugins))
     else:
         addFile(file, status, repr(sanitizeModuleList(extractPlugins)))
 
-    if not status.lower().startswith("processed"):
-        moduleLog.info("%s: %s" % (pad("  unprocessed  ", 30), os.path.basename(file)))
+    if status.lower().startswith("unprocessed"):
+        moduleLog.info("%s: %s" % (pad("%s  unprocessed  " % asterisk, 30), os.path.basename(file)))
+    elif status.lower().startswith("processed"):
+        dic = eval( status[len("PROCESSED: "):] )
+        moduleLog.info("%s: %s" % (pad("%s%s" % (asterisk,dic['name']),30), os.path.basename(file)))
+
+
 
 # centralized place to set common sqlmeta class details
 class myMeta(sqlobject.sqlmeta):
