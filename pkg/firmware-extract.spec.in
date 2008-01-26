@@ -24,7 +24,7 @@ BuildArch: noarch
 
 BuildRequires:  python-devel
 Requires: firmware-tools >= 0:2.0
-Requires: python-sqlite2
+Requires: python-sqlite2, python-sqlobject
 
 %description
 placeholder
