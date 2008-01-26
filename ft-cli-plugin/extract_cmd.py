@@ -153,7 +153,6 @@ class ExtractCommand(ftcommands.YumCommand):
 
             logger = getLogger(file)
             work = generateWork(file, logger)
-            work.append(logger)
             for res in waitForCompletion(conf.parallel):
                 completeWork(*res)
             if conf.parallel > 1:
@@ -169,6 +168,7 @@ class ExtractCommand(ftcommands.YumCommand):
 decorate(traceLog())
 def getLogger(file):
     log = getLog("verbose.extract.%s" % os.path.basename(file))
+    log.removeMe = 1
     logfile = os.path.realpath(os.path.join(conf.log_path, os.path.basename(file)))
     # make sure we dont re-add multiple handlers logging to same file
     add=1
@@ -234,7 +234,7 @@ def generateWork(file, logger=moduleLog):
     if conf.re_extract:
         pluginsToTry = dict(extractPlugins)
 
-    return [file, status, existing, pluginsToTry]
+    return [file, status, existing, pluginsToTry, logger]
 
 class clsStatus(object):
     def __init__(self, file, status, logger):
@@ -275,9 +275,9 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
     finally:
         statusObj.finalize(status)
 
-    return [file, status, existing]
+    return [file, status, existing, logger]
 
-def completeWork(file, status, existing):
+def completeWork(file, status, existing, logger):
     asterisk=""
     if existing:
         if existing.status == status:
@@ -293,7 +293,10 @@ def completeWork(file, status, existing):
         dic = eval( status[len("PROCESSED: "):] )
         moduleLog.info("%s: %s" % (pad("%s%s" % (asterisk,dic['name']),30), os.path.basename(file)))
 
-
+    for handler in logger.handlers:
+        if getattr(handler, "removeMe", None):
+            handler.stream.close()
+            logger.handlers.remove(handler)
 
 # centralized place to set common sqlmeta class details
 class myMeta(sqlobject.sqlmeta):
