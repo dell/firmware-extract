@@ -273,7 +273,12 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
                 logger.exception(e)
                 moduleLog.exception(str(e))
     finally:
-        statusObj.finalize(status)
+        try:
+            statusObj.finalize(status)
+        except Exception, e:
+            logger.exception(e)
+            moduleLog.exception(str(e))
+            raise
 
     return [file, status, existing, logger]
 
