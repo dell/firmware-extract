@@ -168,7 +168,6 @@ class ExtractCommand(ftcommands.YumCommand):
 decorate(traceLog())
 def getLogger(file):
     log = getLog("verbose.extract.%s" % os.path.basename(file))
-    log.removeMe = 1
     logfile = os.path.realpath(os.path.join(conf.log_path, os.path.basename(file)))
     # make sure we dont re-add multiple handlers logging to same file
     add=1
@@ -184,6 +183,7 @@ def getLogger(file):
             os.makedirs(conf.log_path)
 
         fh = logging.FileHandler(logfile, "w")
+        fh.removeMe = 1
         formatter = logging.Formatter("%(message)s")
         fh.setFormatter(formatter)
         fh.setLevel(logging.NOTSET)
