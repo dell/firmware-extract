@@ -40,6 +40,7 @@ moduleLog = getLog()
 moduleLogVerbose = getLog(prefix="verbose.")
 
 extractPlugins = {}
+extractPluginsOrder = []
 conf = None
 
 plugins.registerSlotToConduit('extract_addSubOptions', 'PluginConduit')
@@ -75,6 +76,8 @@ decorate(traceLog())
 def registerPlugin(callable, version, **kargs):
     name = kargs.get("name", callable.__name__)
     extractPlugins[name] = { 'name': name, 'callable': callable, 'version': version }
+    if name not in extractPluginsOrder:
+        extractPluginsOrder.append(name)
 
 class ExtractCommand(ftcommands.YumCommand):
     decorate(traceLog())
@@ -252,7 +255,11 @@ def pad(s, n):
 def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
     statusObj = clsStatus(file, status, logger)
     try:
-        for name, dic in pluginsToTry.items():
+        for name in extractPluginsOrder:
+            dic = pluginsToTry.get(name)
+            if dic is None:
+                continue
+
             logger.info("running plugin %s:%s" % (name, dic['version']))
             try:
                 ret = dic['callable'](statusObj, conf.extract_topdir, logger)
