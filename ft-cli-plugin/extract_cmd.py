@@ -300,10 +300,10 @@ def completeWork(file, status, existing, logger):
         addFile(file, status, repr(sanitizeModuleList(extractPlugins)))
 
     if status.lower().startswith("unprocessed"):
-        moduleLog.info("%s: %s" % (pad("%s  unprocessed  " % asterisk, 30), os.path.basename(file)))
+        moduleLog.info("%s: %s" % (pad("%s  unprocessed  " % asterisk, 25), pad(os.path.basename(file),25) ))
     elif status.lower().startswith("processed"):
         dic = eval( status[len("PROCESSED: "):] )
-        moduleLog.info("%s: %s" % (pad("%s%s" % (asterisk,dic['name']),30), os.path.basename(file)))
+        moduleLog.info("%s: %s" % (pad("%s%s" % (asterisk,dic['name']),25), pad(os.path.basename(file),25) ))
 
     for handler in logger.handlers:
         if getattr(handler, "removeMe", None):

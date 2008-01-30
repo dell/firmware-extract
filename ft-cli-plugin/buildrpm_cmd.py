@@ -22,6 +22,7 @@ firmwaretool plugin
 import inspect
 import logging
 import os
+import shutil
 import sqlobject
 import stat
 import time
@@ -55,6 +56,9 @@ def config_hook(conduit, *args, **kargs):
     global conf
     conf = checkConf(conduit.getConf())
 
+    import firmware_extract.buildrpm
+    registerPlugin( firmware_extract.buildrpm.makeRpm, fe.__VERSION__ )
+
 true_vals = ("1", "true", "yes", "on")
 def checkConf(conf):
     if getattr(conf, "rebuild", None) is None:
@@ -64,6 +68,9 @@ def checkConf(conf):
 
     if getattr(conf, "parallel", None) is None:
         conf.parallel = 8
+
+    if getattr(conf, "output_topdir", None) is None:
+        conf.output_topdir = None
 
     return conf
 
@@ -125,7 +132,11 @@ class BuildrpmCommand(ftcommands.YumCommand):
 decorate(traceLog())
 def getLogger(dirName):
     log = getLog("verbose.buildrpm.%s" % dirName)
-    logfile = os.path.join(dirName, "buildrpm.log")
+    try:
+        os.makedirs(os.path.join(dirName, "rpm"))
+    except OSError:
+        pass
+    logfile = os.path.join(dirName, "rpm", "buildrpm.log")
     # make sure we dont re-add multiple handlers logging to same file
     add=1
     for h in log.handlers:
@@ -181,8 +192,8 @@ def generateWork(pkgDir, logger=moduleLog):
     return [pkgDir, status, pluginsToTry, logger]
 
 class clsStatus(object):
-    def __init__(self, file, status, logger):
-        self.file = file
+    def __init__(self, pkgDir, status, logger):
+        self.pkgDir = pkgDir
         self.logger = logger
         self.status = status
         self.finalFuncs = []
@@ -196,7 +207,6 @@ def pad(s, n):
 def doWork( pkgDir, status, pluginsToTry, logger=moduleLogVerbose):
     statusObj = clsStatus(pkgDir, status, logger)
     try:
-        logger.info("doWork(%s)" % pkgDir)
         for name in buildrpmPluginsOrder:
             dic = pluginsToTry.get(name)
             if dic is None:
@@ -229,20 +239,14 @@ def doWork( pkgDir, status, pluginsToTry, logger=moduleLogVerbose):
             moduleLog.exception(str(e))
             raise
 
-    return [file, status, logger]
+    return [pkgDir, status, logger]
 
 def completeWork(pkgDir, status, logger):
+    moduleLog.info("finished processing %s" % pkgDir)
     for handler in logger.handlers:
         if getattr(handler, "removeMe", None):
             handler.stream.close()
             logger.handlers.remove(handler)
-
-decorate(traceLog())
-def sanitizeModuleList(modules):
-    myModules = {}
-    for modName, dets in modules.items():
-        myModules[modName] = {'name': dets['name'], 'version': dets['version']}
-    return myModules
 
 decorate(traceLog())
 def walkDirsReturningPackages(paths):
