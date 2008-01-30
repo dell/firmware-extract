@@ -9,6 +9,7 @@ EXTRA_DIST += COPYING-GPL COPYING-OSL
 
 pkgpython_PYTHON = \
 	firmware_extract/__init__.py 	\
+	firmware_extract/buildrpm.py	\
 	firmware_extract/mockextract.py 
 
 clidir = $(datadir)/firmware-tools/plugins/
