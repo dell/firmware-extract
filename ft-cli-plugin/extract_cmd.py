@@ -252,8 +252,8 @@ class clsStatus(object):
 def pad(s, n):
     return s[:n] + ' ' * (n-len(s))
 
-def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
-    statusObj = clsStatus(file, status, logger)
+def doWork( fileName, status, existing, pluginsToTry, logger=moduleLogVerbose):
+    statusObj = clsStatus(fileName, status, logger)
     try:
         for name in extractPluginsOrder:
             dic = pluginsToTry.get(name)
@@ -267,9 +267,11 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
                     status = "PROCESSED: %s" % repr({'name': dic['name'], 'version':dic['version']})
                     break
             except fe.CritExc, e:
+                moduleLog.info("Exception while processing file %s" % fileName)
                 logger.exception(e)
                 moduleLog.critical(str(e))
             except fe.WarnExc, e:
+                moduleLog.info("Exception while processing file %s" % fileName)
                 logger.warning(str(e))
                 moduleLog.warning(str(e))
             except fe.InfoExc, e:
@@ -277,6 +279,7 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
             except fe.DebugExc, e:
                 logger.debug(str(e))
             except Exception, e:
+                moduleLog.info("Exception while processing file %s" % fileName)
                 logger.exception(e)
                 moduleLog.exception(str(e))
     finally:
@@ -287,7 +290,7 @@ def doWork( file, status, existing, pluginsToTry, logger=moduleLogVerbose):
             moduleLog.exception(str(e))
             raise
 
-    return [file, status, existing, logger]
+    return [fileName, status, existing, logger]
 
 def completeWork(file, status, existing, logger):
     asterisk=""
