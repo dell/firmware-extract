@@ -90,6 +90,7 @@ class BuildrpmCommand(ftcommands.YumCommand):
     def addSubOptions(self, base, mode, cmdline, processedArgs):
         base.optparser.add_option("--rebuild", action="store_true", dest="rebuild", default=None, help="Force rebuild even if pkg has already been built once.")
         base.optparser.add_option("--parallel", action="store", dest="buildrpm_parallel", default=None, help="Override number of parallel buildrpm instances.")
+        base.optparser.add_option("--output_topdir", action="store", dest="output_topdir", default=None, help="Override default rpm output dir.")
 
         base.plugins.run("buildrpm_addSubOptions")
 

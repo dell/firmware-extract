@@ -221,12 +221,14 @@ def generateWork(file, logger=moduleLog):
     # use all extractPlugins to try to process it
     #   -> remove any extractPlugins that were already this ver
     logger.debug("Processing %s" % file)
-    status = "UNPROCESSED"
+    status = {'processed': False, 'name':"", 'version':''}
     pluginsToTry = dict(extractPlugins)
     existing = alreadyProcessed(file)
     if existing is not None:
         modules = eval(existing.modules)
-        status = existing.status
+        status['processed'] = existing.processed
+        status['name'] = existing.module_name
+        status['version'] = existing.module_version
         for key, dic in modules.items():
             if pluginsToTry.get(key) is None:
                 continue
@@ -264,7 +266,7 @@ def doWork( fileName, status, existing, pluginsToTry, logger=moduleLogVerbose):
             try:
                 ret = dic['callable'](statusObj, conf.extract_topdir, logger)
                 if ret:
-                    status = "PROCESSED: %s" % repr({'name': dic['name'], 'version':dic['version']})
+                    status = {'processed': True, 'name': dic['name'], 'version':dic['version']}
                     break
             except fe.CritExc, e:
                 moduleLog.info("Exception while processing file %s" % fileName)
@@ -295,18 +297,19 @@ def doWork( fileName, status, existing, pluginsToTry, logger=moduleLogVerbose):
 def completeWork(file, status, existing, logger):
     asterisk=""
     if existing:
-        if existing.status == status:
+        if existing.module_name == status["name"] and existing.module_version == status["version"]:
             asterisk="*"
-        existing.status = status
+        existing.processed = status["processed"]
+        existing.module_name = status["name"]
+        existing.module_version = status["version"]
         existing.modules = repr(sanitizeModuleList(extractPlugins))
     else:
         addFile(file, status, repr(sanitizeModuleList(extractPlugins)))
 
-    if status.lower().startswith("unprocessed"):
-        moduleLog.info("%s: %s" % (pad("%s  unprocessed  " % asterisk, 25), pad(os.path.basename(file),25) ))
-    elif status.lower().startswith("processed"):
-        dic = eval( status[len("PROCESSED: "):] )
-        moduleLog.info("%s: %s" % (pad("%s%s" % (asterisk,dic['name']),25), pad(os.path.basename(file),25) ))
+    if not status["processed"]:
+        moduleLog.info("%s: %s" % (pad("%s  unprocessed  " % asterisk, 25), pad(os.path.basename(file),32) ))
+    elif status["processed"]:
+        moduleLog.info("%s: %s" % (pad("%s%s" % (asterisk,status['name']),25), pad(os.path.basename(file),32) ))
 
     for handler in logger.handlers:
         if getattr(handler, "removeMe", None):
@@ -319,8 +322,10 @@ class myMeta(sqlobject.sqlmeta):
 
 class ProcessedFile(sqlobject.SQLObject):
     class sqlmeta(myMeta): pass
-    status = sqlobject.StringCol()  # "PROCESSED" | "UNPROCESSED"
+    processed = sqlobject.BoolCol()  # "PROCESSED" | "UNPROCESSED"
     name = sqlobject.StringCol()
+    module_name = sqlobject.StringCol()
+    module_version = sqlobject.StringCol()
     size = sqlobject.IntCol()
     ctime = sqlobject.IntCol()
     md5sum = sqlobject.StringCol()
@@ -344,8 +349,9 @@ decorate(traceLog())
 def addFile(file, status, modules):
     name, size, ctime, md5sum = fileDetails(file)
     ProcessedFile(
-        status=status, name=name, size=size,
-        ctime=ctime, md5sum=md5sum, modules=modules)
+        processed=status["processed"], name=name, size=size,
+        ctime=ctime, md5sum=md5sum, modules=modules, module_name=status["name"],
+        module_version=status["version"])
 
 decorate(traceLog())
 def fileDetails(file):

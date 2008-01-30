@@ -28,35 +28,49 @@ def makeRpm(statusObj, output_topdir, logger):
     if ini_hook is not None:
         ini_hook(packageIni)
 
-    name = packageIni.get("package", "safe_name")
+    if packageIni.has_option("package", "blacklisted"):
+        if packageIni.get("package", "blacklisted"):
+            return
+
+    safe_name = packageIni.get("package", "safe_name")
     ver = packageIni.get("package", "version")
     rel = getSpecRelease(spec)
     epoch = packageIni.get("package", "epoch")
 
+    if packageIni.has_option("package", "rpm_name"):
+        lookFor = packageIni.get("package", "rpm_name")
+    else:
+        lookFor = safe_name
+
+    outputDir = os.path.join(statusObj.pkgDir, "rpm")
+    if output_topdir is not None:
+        outputDir = output_topdir
+
     # TODO: see if RPM already exists with this name/ver/rel
-    for hdr in  yieldSrpmHeaders(*glob.glob(os.path.join(statusObj.pkgDir, "rpm", "noarch", "*.noarch.rpm"))):
+    for hdr in yieldSrpmHeaders(*glob.glob(os.path.join(outputDir, "noarch", "*.noarch.rpm"))):
         (rpm_name, rpm_epoch, rpm_ver, rpm_rel, rpm_arch) = getNEVRA(hdr)
         rpm_epoch = str(rpm_epoch)
         provides = providesTextFromHdr(hdr)
-        lookingFor = "%s = %s:%s-%s" % (name, epoch, ver, rel)
+        lookingFor = "%s = %s:%s-%s" % (lookFor, epoch, ver, rel)
         if rpm_ver == ver and rpm_rel == rel and rpm_epoch == epoch:
-            logger.info("Provides: %s" % repr(provides))
-            logger.info("lookingFor: %s" % lookingFor)
             if lookingFor in provides:
                 logger.info("Skipping rebuild of this RPM since it already exists with this NEVRA")
                 return
 
     shutil.copy(spec, os.path.join(statusObj.pkgDir, "rpm", "package.spec.in"))
 
-    makeTarball(name, ver, statusObj.pkgDir, os.path.join(statusObj.pkgDir, "rpm"))
-    os.mkdir(os.path.join(statusObj.pkgDir, "rpm", "build"))
+    makeTarball(safe_name, ver, statusObj.pkgDir, os.path.join(statusObj.pkgDir, "rpm"))
+    try:
+        os.mkdir(os.path.join(statusObj.pkgDir, "rpm", "build"))
+    except OSError: # dir exists
+        pass
 
     inp = open(os.path.join(statusObj.pkgDir, "rpm", "package.spec.in"), "r")
     out = open(os.path.join(statusObj.pkgDir, "rpm", "package.spec"), "w+")
     for line in inp.readlines():
         for option in packageIni.options("package"):
             value = packageIni.get("package", option)
-            if value == "": value = "%{nil}"
+            if value == "": value = '""'
             line = line.replace("#%s#" % option, value)
         out.write(line)
     inp.close()
@@ -65,13 +79,13 @@ def makeRpm(statusObj, output_topdir, logger):
     cmd = ["rpmbuild",
         "--define", "_topdir %s" % os.path.join(statusObj.pkgDir, "rpm"),
         "--define", "_builddir %s" % os.path.join(statusObj.pkgDir, "rpm", "build"),
-        "--define", "_rpmdir %s" % os.path.join(statusObj.pkgDir, "rpm"),
+        "--define", "_rpmdir %s" % outputDir,
         "--define", "_sourcedir %s" % os.path.join(statusObj.pkgDir, "rpm"),
         "--define", "_specdir %s" % os.path.join(statusObj.pkgDir, "rpm"),
-        "--define", "_srcrpmdir %s" % os.path.join(statusObj.pkgDir, "rpm"),
+        "--define", "_srcrpmdir %s" % outputDir,
         "-ba", os.path.join(statusObj.pkgDir, "rpm", "package.spec")]
 
-    common.loggedCmd(cmd, logger)
+    common.loggedCmd(cmd, logger, returnOutput=1)
     shutil.rmtree(os.path.join(statusObj.pkgDir, "rpm", "build"))
 
 decorate(traceLog())
