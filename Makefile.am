@@ -16,4 +16,5 @@ cli_PYTHON = \
 	ft-cli-plugin/extract_cmd.py	\
 	ft-cli-plugin/buildrpm_cmd.py
 
-REPLACE_VARS_ON_INSTALL= 
+REPLACE_VARS_ON_INSTALL= \
+	$(pkgpythondir)/__init__.py
