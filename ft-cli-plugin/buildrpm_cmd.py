@@ -32,6 +32,7 @@ import firmware_extract as fe
 import firmwaretools
 import firmwaretools.pycompat as pycompat
 import firmwaretools.plugins as plugins
+import firmware_addon_dell.extract_common as common
 from firmwaretools.trace_decorator import decorate, traceLog, getLog
 
 plugin_type = (plugins.TYPE_CLI,)
@@ -182,7 +183,7 @@ def generateWork(pkgDir, logger=moduleLog):
     # use all buildrpmPlugins to try to process it
     #   -> remove any buildrpmPlugins that were already this ver
     logger.debug("Processing %s" % pkgDir)
-    status = "UNPROCESSED"
+    status = {"processed":False, "name":"Already Built", "version":""}
     pluginsToTry = dict(buildrpmPlugins)
 
     if conf.rebuild:
@@ -215,7 +216,7 @@ def doWork( pkgDir, status, pluginsToTry, logger=moduleLogVerbose):
             try:
                 ret = dic['callable'](statusObj, conf.output_topdir, logger)
                 if ret:
-                    status = "PROCESSED: %s" % repr({'name': dic['name'], 'version':dic['version']})
+                    status = {"processed":True, 'name': dic['name'], 'version':dic['version']}
                     break
             except fe.CritExc, e:
                 logger.exception(e)
@@ -241,7 +242,11 @@ def doWork( pkgDir, status, pluginsToTry, logger=moduleLogVerbose):
     return [pkgDir, status, logger]
 
 def completeWork(pkgDir, status, logger):
-    moduleLog.info("finished processing %s" % pkgDir)
+    if status["processed"]:
+        moduleLog.info("%s: %s" % (common.pad(status["name"] + ":" + status["version"],22), pkgDir))
+    else:
+        moduleLog.info("%s: %s" % (common.pad(status.get("reason", "  Could not process"),22), pkgDir))
+
     for handler in logger.handlers:
         if getattr(handler, "removeMe", None):
             handler.stream.close()

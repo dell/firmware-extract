@@ -31,6 +31,7 @@ import firmware_extract as fe
 import firmwaretools
 import firmwaretools.pycompat as pycompat
 import firmwaretools.plugins as plugins
+import firmware_addon_dell.extract_common as common
 from firmwaretools.trace_decorator import decorate, traceLog, getLog
 
 plugin_type = (plugins.TYPE_CLI,)
@@ -251,9 +252,6 @@ class clsStatus(object):
         for func in self.finalFuncs:
             func(self, status)
 
-def pad(s, n):
-    return s[:n] + ' ' * (n-len(s))
-
 def doWork( fileName, status, existing, pluginsToTry, logger=moduleLogVerbose):
     statusObj = clsStatus(fileName, status, logger)
     try:
@@ -307,9 +305,9 @@ def completeWork(file, status, existing, logger):
         addFile(file, status, repr(sanitizeModuleList(extractPlugins)))
 
     if not status["processed"]:
-        moduleLog.info("%s: %s" % (pad("%s  unprocessed  " % asterisk, 25), pad(os.path.basename(file),32) ))
+        moduleLog.info("%s: %s" % (common.pad("%s  unprocessed  " % asterisk, 25), common.pad(os.path.basename(file),32) ))
     elif status["processed"]:
-        moduleLog.info("%s: %s" % (pad("%s%s" % (asterisk,status['name']),25), pad(os.path.basename(file),32) ))
+        moduleLog.info("%s: %s" % (common.pad("%s%s" % (asterisk,status['name']),25), common.pad(os.path.basename(file),32) ))
 
     for handler in logger.handlers:
         if getattr(handler, "removeMe", None):

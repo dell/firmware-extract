@@ -13,6 +13,7 @@ from firmwaretools.trace_decorator import decorate, traceLog, getLog
 import firmware_addon_dell.extract_common as common
 
 specMapping = {}
+rpmCache = []
 
 decorate(traceLog())
 def makeRpm(statusObj, output_topdir, logger):
@@ -23,6 +24,8 @@ def makeRpm(statusObj, output_topdir, logger):
         spec = specMapping[ packageIni.get("package","type") ]["spec"]
         ini_hook = specMapping[ packageIni.get("package","type") ].get("ini_hook", None)
     except KeyError:
+        logger.info("This package is has no spec file listed.")
+        statusObj.status["reason"] = "No spec file"
         return
 
     if ini_hook is not None:
@@ -30,6 +33,8 @@ def makeRpm(statusObj, output_topdir, logger):
 
     if packageIni.has_option("package", "blacklisted"):
         if packageIni.get("package", "blacklisted"):
+            logger.info("This package is blacklisted. Skipping.")
+            statusObj.status["reason"] = "Blacklisted package"
             return
 
     safe_name = packageIni.get("package", "safe_name")
@@ -37,24 +42,34 @@ def makeRpm(statusObj, output_topdir, logger):
     rel = getSpecRelease(spec)
     epoch = packageIni.get("package", "epoch")
 
+    if ver.lower() == "unknown":
+        logger.info("refusing to build rpm for unknown version.")
+
     if packageIni.has_option("package", "rpm_name"):
         lookFor = packageIni.get("package", "rpm_name")
     else:
         lookFor = safe_name
+
+    lookingFor = "%s = %s:%s-%s" % (lookFor, epoch, ver, rel)
 
     outputDir = os.path.join(statusObj.pkgDir, "rpm")
     if output_topdir is not None:
         outputDir = output_topdir
 
     # TODO: see if RPM already exists with this name/ver/rel
-    for hdr in yieldSrpmHeaders(*glob.glob(os.path.join(outputDir, "noarch", "*.noarch.rpm"))):
-        (rpm_name, rpm_epoch, rpm_ver, rpm_rel, rpm_arch) = getNEVRA(hdr)
-        rpm_epoch = str(rpm_epoch)
-        provides = providesTextFromHdr(hdr)
-        lookingFor = "%s = %s:%s-%s" % (lookFor, epoch, ver, rel)
+    global rpmCache
+    if not rpmCache:
+        for hdr in yieldSrpmHeaders(*glob.glob(os.path.join(outputDir, "noarch", "*.noarch.rpm"))):
+            (rpm_name, rpm_epoch, rpm_ver, rpm_rel, rpm_arch) = getNEVRA(hdr)
+            rpm_epoch = str(rpm_epoch)
+            provides = providesTextFromHdr(hdr)
+            rpmCache.append([rpm_ver, rpm_rel, rpm_epoch, provides])
+
+    for rpm_ver, rpm_rel, rpm_epoch, provides in rpmCache:
         if rpm_ver == ver and rpm_rel == rel and rpm_epoch == epoch:
             if lookingFor in provides:
                 logger.info("Skipping rebuild of this RPM since it already exists with this NEVRA")
+                statusObj.status["processed"] = True
                 return
 
     shutil.copy(spec, os.path.join(statusObj.pkgDir, "rpm", "package.spec.in"))
@@ -70,7 +85,7 @@ def makeRpm(statusObj, output_topdir, logger):
     for line in inp.readlines():
         for option in packageIni.options("package"):
             value = packageIni.get("package", option)
-            if value == "": value = '""'
+            if value == "": value = "%{nil}"
             line = line.replace("#%s#" % option, value)
         out.write(line)
     inp.close()
@@ -87,6 +102,8 @@ def makeRpm(statusObj, output_topdir, logger):
 
     common.loggedCmd(cmd, logger, returnOutput=1)
     shutil.rmtree(os.path.join(statusObj.pkgDir, "rpm", "build"))
+    statusObj.status["processed"] = True
+    return True
 
 decorate(traceLog())
 def makeTarball(name, ver, pkgDir, outputDir):
