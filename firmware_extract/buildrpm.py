@@ -44,6 +44,8 @@ def makeRpm(statusObj, output_topdir, logger):
 
     if ver.lower() == "unknown":
         logger.info("refusing to build rpm for unknown version.")
+        statusObj.status["reason"] = "Wont build 'unknown' version"
+        return False
 
     if packageIni.has_option("package", "rpm_name"):
         lookFor = packageIni.get("package", "rpm_name")

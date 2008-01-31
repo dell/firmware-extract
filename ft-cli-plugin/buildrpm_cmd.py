@@ -243,9 +243,9 @@ def doWork( pkgDir, status, pluginsToTry, logger=moduleLogVerbose):
 
 def completeWork(pkgDir, status, logger):
     if status["processed"]:
-        moduleLog.info("%s: %s" % (common.pad(status["name"] + ":" + status["version"],22), pkgDir))
+        moduleLog.info("%s: %s" % (common.pad(status["name"] + ":" + status["version"],29), pkgDir))
     else:
-        moduleLog.info("%s: %s" % (common.pad(status.get("reason", "  Could not process"),22), pkgDir))
+        moduleLog.info("%s: %s" % (common.pad(status.get("reason", "  Could not process"),29), pkgDir))
 
     for handler in logger.handlers:
         if getattr(handler, "removeMe", None):
