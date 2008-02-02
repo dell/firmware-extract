@@ -57,6 +57,10 @@ def makeRpm(statusObj, output_topdir, logger):
     outputDir = os.path.join(statusObj.pkgDir, "rpm")
     if output_topdir is not None:
         outputDir = output_topdir
+    if not os.path.exists(outputDir):
+        os.mkdir(outputDir)
+    if not os.path.exists(os.path.join(outputDir, "srpms")):
+        os.mkdir(os.path.join(outputDir, "srpms"))
 
     # TODO: see if RPM already exists with this name/ver/rel
     global rpmCache
@@ -99,7 +103,7 @@ def makeRpm(statusObj, output_topdir, logger):
         "--define", "_rpmdir %s" % outputDir,
         "--define", "_sourcedir %s" % os.path.join(statusObj.pkgDir, "rpm"),
         "--define", "_specdir %s" % os.path.join(statusObj.pkgDir, "rpm"),
-        "--define", "_srcrpmdir %s" % outputDir,
+        "--define", "_srcrpmdir %s" % os.path.join(outputDir, "srpms"),
         "-ba", os.path.join(statusObj.pkgDir, "rpm", "package.spec")]
 
     common.loggedCmd(cmd, logger, returnOutput=1)
