@@ -186,9 +186,6 @@ def generateWork(pkgDir, logger=moduleLog):
     status = {"processed":False, "name":"Already Built", "version":""}
     pluginsToTry = dict(buildrpmPlugins)
 
-    if conf.rebuild:
-        pluginsToTry = dict(buildrpmPlugins)
-
     return [pkgDir, status, pluginsToTry, logger]
 
 class clsStatus(object):
@@ -214,7 +211,7 @@ def doWork( pkgDir, status, pluginsToTry, logger=moduleLogVerbose):
 
             logger.info("running plugin %s:%s" % (name, dic['version']))
             try:
-                ret = dic['callable'](statusObj, conf.output_topdir, logger)
+                ret = dic['callable'](statusObj, conf.output_topdir, logger, conf.rebuild)
                 if ret:
                     status = {"processed":True, 'name': dic['name'], 'version':dic['version']}
                     break
