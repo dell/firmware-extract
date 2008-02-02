@@ -14,9 +14,10 @@ import firmware_addon_dell.extract_common as common
 
 specMapping = {}
 rpmCache = []
+rpmCache_dirname = ""
 
 decorate(traceLog())
-def makeRpm(statusObj, output_topdir, logger):
+def makeRpm(statusObj, output_topdir, logger, forceRebuild=False):
     packageIni = ConfigParser.ConfigParser()
     packageIni.read( os.path.join(statusObj.pkgDir, "package.ini"))
 
@@ -40,7 +41,9 @@ def makeRpm(statusObj, output_topdir, logger):
     safe_name = packageIni.get("package", "safe_name")
     ver = packageIni.get("package", "version")
     rel = getSpecRelease(spec)
-    epoch = packageIni.get("package", "epoch")
+    epoch = "0"
+    if packageIni.has_option("package", "epoch"): 
+        epoch = packageIni.get("package", "epoch")
 
     if ver.lower() == "unknown":
         logger.info("refusing to build rpm for unknown version.")
@@ -64,14 +67,18 @@ def makeRpm(statusObj, output_topdir, logger):
 
     # TODO: see if RPM already exists with this name/ver/rel
     global rpmCache
-    if not rpmCache:
-        for hdr in yieldSrpmHeaders(*glob.glob(os.path.join(outputDir, "noarch", "*.noarch.rpm"))):
+    global rpmCache_dirname
+    if not rpmCache or rpmCache_dirname != outputDir:
+        rpmCache_dirname = outputDir
+        rpmCache = []
+        if not forceRebuild:
+          for hdr in yieldSrpmHeaders(*glob.glob(os.path.join(outputDir, "noarch", "*.noarch.rpm"))):
             (rpm_name, rpm_epoch, rpm_ver, rpm_rel, rpm_arch) = getNEVRA(hdr)
             rpm_epoch = str(rpm_epoch)
             provides = providesTextFromHdr(hdr)
-            rpmCache.append([rpm_ver, rpm_rel, rpm_epoch, provides])
+            rpmCache.append([rpm_name, rpm_ver, rpm_rel, rpm_epoch, provides])
 
-    for rpm_ver, rpm_rel, rpm_epoch, provides in rpmCache:
+    for rpm_name, rpm_ver, rpm_rel, rpm_epoch, provides in rpmCache:
         if rpm_ver == ver and rpm_rel == rel and rpm_epoch == epoch:
             if lookingFor in provides:
                 logger.info("Skipping rebuild of this RPM since it already exists with this NEVRA")

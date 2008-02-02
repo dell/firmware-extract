@@ -301,6 +301,7 @@ def completeWork(file, status, existing, logger):
         existing.module_name = status["name"]
         existing.module_version = status["version"]
         existing.modules = repr(sanitizeModuleList(extractPlugins))
+        existing.lastUpdate = sqlobject.DateTimeCol.now()
     else:
         addFile(file, status, repr(sanitizeModuleList(extractPlugins)))
 
@@ -328,6 +329,8 @@ class ProcessedFile(sqlobject.SQLObject):
     ctime = sqlobject.IntCol()
     md5sum = sqlobject.StringCol()
     modules = sqlobject.StringCol()
+    firstProcessed = sqlobject.DateTimeCol(default=sqlobject.DateTimeCol.now)
+    lastUpdate = sqlobject.DateTimeCol(default=sqlobject.DateTimeCol.now)
 
 decorate(traceLog())
 def alreadyProcessed(file):
