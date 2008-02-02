@@ -4,12 +4,12 @@
 
 ####################################
 # change version here.
-AC_INIT([firmware-extract],[2.0.2])
+AC_INIT([firmware-extract],[2.0.3])
 
 temp_RELEASE_NAME=firmware-extract
 temp_RELEASE_MAJOR=2
 temp_RELEASE_MINOR=0
-temp_RELEASE_SUBLEVEL=2
+temp_RELEASE_SUBLEVEL=3
 temp_RELEASE_EXTRALEVEL=
 ####################################
 
