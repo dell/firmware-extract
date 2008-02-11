@@ -30,7 +30,7 @@ def makeRpm(statusObj, output_topdir, logger, forceRebuild=False):
         return
 
     if ini_hook is not None:
-        ini_hook(packageIni)
+        ini_hook(packageIni, statusObj.pkgdir)
 
     if packageIni.has_option("package", "blacklisted"):
         if packageIni.get("package", "blacklisted"):
