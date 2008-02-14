@@ -36,6 +36,12 @@ import firmwaretools.plugins as plugins
 import firmware_addon_dell.extract_common as common
 from firmwaretools.trace_decorator import decorate, traceLog, getLog
 
+try:
+    import rpmUtils
+except ImportError:
+    # if we are on a non-rpm based system, cant really build rpms.
+    raise plugins.DisablePlugin
+
 plugin_type = (plugins.TYPE_CLI,)
 requires_api_version = "2.0"
 
