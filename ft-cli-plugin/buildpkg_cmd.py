@@ -57,8 +57,9 @@ plugins.registerSlotToConduit('buildrpm_doCheck', 'PluginConduit')
 
 def config_hook(conduit, *args, **kargs):
     conduit.getOptParser().addEarlyParse("--buildpkg")
+    conduit.getOptParser().addEarlyParse("--buildrpm") # backwards compat... deprecated
     conduit.getOptParser().add_option(
-        "--buildpkg", help="Build an RPM for extracted firmware.",
+        "--buildpkg", "--buildrpm", help="Build a native package (RPM/DEB) for extracted firmware.",
         action="store_const", const="buildrpm", dest="mode")
     conduit.getBase().registerCommand(BuildrpmCommand())
     global conf
