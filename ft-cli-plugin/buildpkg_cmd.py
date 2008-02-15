@@ -56,9 +56,9 @@ plugins.registerSlotToConduit('buildrpm_addSubOptions', 'PluginConduit')
 plugins.registerSlotToConduit('buildrpm_doCheck', 'PluginConduit')
 
 def config_hook(conduit, *args, **kargs):
-    conduit.getOptParser().addEarlyParse("--buildrpm")
+    conduit.getOptParser().addEarlyParse("--buildpkg")
     conduit.getOptParser().add_option(
-        "--buildrpm", help="Build an RPM for extracted firmware.",
+        "--buildpkg", help="Build an RPM for extracted firmware.",
         action="store_const", const="buildrpm", dest="mode")
     conduit.getBase().registerCommand(BuildrpmCommand())
     global conf
@@ -77,8 +77,8 @@ def checkConf(conf):
     if getattr(conf, "parallel", None) is None:
         conf.parallel = 8
 
-    if getattr(conf, "output_topdir", None) is None:
-        conf.output_topdir = None
+    if getattr(conf, "outputdir", None) is None:
+        conf.outputdir = None
 
     return conf
 
@@ -98,7 +98,7 @@ class BuildrpmCommand(ftcommands.YumCommand):
     def addSubOptions(self, base, mode, cmdline, processedArgs):
         base.optparser.add_option("--rebuild", action="store_true", dest="rebuild", default=None, help="Force rebuild even if pkg has already been built once.")
         base.optparser.add_option("--parallel", action="store", dest="buildrpm_parallel", default=None, help="Override number of parallel buildrpm instances.")
-        base.optparser.add_option("--output_topdir", action="store", dest="output_topdir", default=None, help="Override default rpm output dir.")
+        base.optparser.add_option("--outputdir", "--output_topdir", action="store", dest="outputdir", default=None, help="Override default rpm output dir.")
 
         base.plugins.run("buildrpm_addSubOptions")
 
@@ -110,8 +110,8 @@ class BuildrpmCommand(ftcommands.YumCommand):
         if base.opts.rebuild is not None:
             conf.rebuild = base.opts.rebuild
 
-        if base.opts.output_topdir is not None:
-            conf.output_topdir = os.path.realpath(os.path.expanduser(base.opts.output_topdir))
+        if base.opts.outputdir is not None:
+            conf.outputdir = os.path.realpath(os.path.expanduser(base.opts.outputdir))
 
         base.plugins.run("buildrpm_doCheck")
 
@@ -218,7 +218,7 @@ def doWork( pkgDir, status, pluginsToTry, logger=moduleLogVerbose):
 
             logger.info("running plugin %s:%s" % (name, dic['version']))
             try:
-                ret = dic['callable'](statusObj, conf.output_topdir, logger, conf.rebuild)
+                ret = dic['callable'](statusObj, conf.outputdir, logger, conf.rebuild)
                 if ret:
                     status = {"processed":True, 'name': dic['name'], 'version':dic['version']}
                     break
