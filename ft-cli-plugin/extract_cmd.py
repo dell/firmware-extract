@@ -75,11 +75,14 @@ def checkConf(conf):
     return conf
 
 decorate(traceLog())
-def registerPlugin(callable, version, **kargs):
+def registerPlugin(callable, version, registerFront=False, **kargs):
     name = kargs.get("name", callable.__name__)
     extractPlugins[name] = { 'name': name, 'callable': callable, 'version': version }
     if name not in extractPluginsOrder:
-        extractPluginsOrder.append(name)
+        if registerFront:
+            extractPluginsOrder.insert(0,name)
+        else:
+            extractPluginsOrder.append(name)
 
 class ExtractCommand(ftcommands.YumCommand):
     decorate(traceLog())
