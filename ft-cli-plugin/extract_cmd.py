@@ -234,12 +234,15 @@ def generateWork(file, logger=moduleLog):
         status['processed'] = existing.processed
         status['name'] = existing.module_name
         status['version'] = existing.module_version
-        for key, dic in modules.items():
-            if pluginsToTry.get(key) is None:
-                continue
-            if pluginsToTry[key]["version"] == dic["version"]:
-                logger.info("already processed by %s:%s" % (key,dic['version']))
-                del(pluginsToTry[key])
+        if status['processed'] and status['version'] == pluginsToTry.get(status['name'], {}).get("version",None):
+            pluginsToTry = {}
+        elif not status['processed']:
+            for key, dic in modules.items():
+                if pluginsToTry.get(key) is None:
+                    continue
+                if pluginsToTry[key]["version"] == dic["version"]:
+                    logger.info("already processed by %s:%s" % (key,dic['version']))
+                    del(pluginsToTry[key])
 
     if conf.re_extract:
         pluginsToTry = dict(extractPlugins)
@@ -301,11 +304,13 @@ def completeWork(file, status, existing, logger):
     if existing:
         if existing.module_name == status["name"] and existing.module_version == status["version"]:
             asterisk="*"
+        else:
+            existing.lastUpdate = sqlobject.DateTimeCol.now()
+
         existing.processed = status["processed"]
         existing.module_name = status["name"]
         existing.module_version = status["version"]
         existing.modules = repr(sanitizeModuleList(extractPlugins))
-        existing.lastUpdate = sqlobject.DateTimeCol.now()
     else:
         addFile(file, status, repr(sanitizeModuleList(extractPlugins)))
 
@@ -325,7 +330,7 @@ class myMeta(sqlobject.sqlmeta):
 
 class ProcessedFile(sqlobject.SQLObject):
     class sqlmeta(myMeta): pass
-    processed = sqlobject.BoolCol()  # "PROCESSED" | "UNPROCESSED"
+    processed = sqlobject.BoolCol()
     name = sqlobject.StringCol()
     module_name = sqlobject.StringCol()
     module_version = sqlobject.StringCol()
