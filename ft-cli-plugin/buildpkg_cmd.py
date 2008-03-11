@@ -33,12 +33,13 @@ import firmware_extract as fe
 import firmwaretools
 import firmwaretools.pycompat as pycompat
 import firmwaretools.plugins as plugins
-import firmware_addon_dell.extract_common as common
 from firmwaretools.trace_decorator import decorate, traceLog, getLog
 
 try:
+    import firmware_addon_dell.extract_common as common
     import rpmUtils
 except ImportError:
+    # if firmware-addon-dell not installed or
     # if we are on a non-rpm based system, cant really build rpms.
     raise plugins.DisablePlugin
 
