@@ -38,7 +38,7 @@ install-data-hook:
 	for i in $(REPLACE_VARS_ON_INSTALL); do      \
 	    file=$(DESTDIR)/$$i                     ;\
 	    perl -p -i -e 's|^__VERSION__\s*=.*|__VERSION__="$(RELEASE_VERSION)"|' $$file ;\
-	    perl -p -i -e 's|^PACKAGE\s*=.*|PACKAGE="$(package)"|' $$file        ;\
+	    perl -p -i -e 's|^PACKAGE\s*=.*|PACKAGE="$(PACKAGE)"|' $$file        ;\
 	    perl -p -i -e 's|^LOCALEDIR\s*=.*|LOCALEDIR="$(localedir)"|' $$file        ;\
 	    perl -p -i -e 's|^LIBDIR\s*=.*|LIBDIR="$(libdir)"|' $$file        ;\
 	    perl -p -i -e 's|^LIBEXECDIR\s*=.*|LIBEXECDIR="$(libexecdir)"|' $$file        ;\
@@ -56,7 +56,7 @@ install-exec-hook:
 	for i in $(REPLACE_VARS_ON_INSTALL); do      \
 	    file=$(DESTDIR)/$$i                     ;\
 	    perl -p -i -e 's|^__VERSION__\s*=.*|__VERSION__="$(RELEASE_VERSION)"|' $$file ;\
-	    perl -p -i -e 's|^PACKAGE\s*=.*|PACKAGE="$(package)"|' $$file        ;\
+	    perl -p -i -e 's|^PACKAGE\s*=.*|PACKAGE="$(PACKAGE)"|' $$file        ;\
 	    perl -p -i -e 's|^LOCALEDIR\s*=.*|LOCALEDIR="$(localedir)"|' $$file        ;\
 	    perl -p -i -e 's|^LIBDIR\s*=.*|LIBDIR="$(libdir)"|' $$file        ;\
 	    perl -p -i -e 's|^LIBEXECDIR\s*=.*|LIBEXECDIR="$(libexecdir)"|' $$file        ;\
@@ -74,6 +74,7 @@ TOPDIR := $(shell cd $(top_builddir);pwd)
 BUILDDIR = $(TOPDIR)/_rpmbuild
 RPMDIR = $(TOPDIR)
 SOURCEDIR = $(TOPDIR)
+SPECFILE= $(TOPDIR)/pkg/$(PACKAGE_NAME).spec
 SPECDIR = $(TOPDIR)/pkg
 SRCRPMDIR = $(TOPDIR)
 
@@ -87,12 +88,12 @@ RPM_DEFINES = --define "_topdir $(TOPDIR)" \
 .PHONY: rpm srpm
 rpm: dist
 	mkdir -p $(BUILDDIR)
-	rpmbuild $(RPM_DEFINES) -ba --nodeps pkg/$(PACKAGE_NAME).spec
+	rpmbuild $(RPM_DEFINES) -ba --nodeps $(SPECFILE)
 	rm -rf $(BUILDDIR)
 
 srpm: dist
 	mkdir -p $(BUILDDIR)
-	rpmbuild $(RPM_DEFINES) -bs --nodeps pkg/$(PACKAGE_NAME).spec
+	rpmbuild $(RPM_DEFINES) -bs --nodeps $(SPECFILE)
 	rm -rf $(BUILDDIR)
 
 # This updates the debian version information, similar to how specfile for RPM
