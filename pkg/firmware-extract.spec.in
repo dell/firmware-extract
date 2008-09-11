@@ -10,17 +10,29 @@
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 
 Name:           firmware-extract
-Version:        %{release_version} 
+Version:        %{release_version}
 Release:        %{rpm_release}%{?dist}
 Summary:        firmware-tools plugin to add firmware extraction from vendor binaries
 
 Group:          Applications/System
 # License is actually GPL/OSL dual license (GPL Compatible), but rpmlint complains
 License:        GPL style
-URL:            http://linux.dell.com/libsmbios/download/ 
+URL:            http://linux.dell.com/libsmbios/download/
 Source0:        http://linux.dell.com/libsmbios/download/%{name}/%{name}-%{version}/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
+# SUSE doesnt have noarch python, so for SUSE, always build arch-dependent
+%if ! 0%{?suse_version}
 BuildArch: noarch
+%endif
+
+# SUSE build has anal directory ownership check. RPM which owns all dirs *must*
+# be installed at buildtime. This means we have to BuildRequire them, even if
+# we dont really need them at build time.
+%if 0%{?suse_version}
+BuildRequires: firmware-tools
+%endif
+
 
 BuildRequires:  python-devel
 Requires: firmware-tools >= 0:2.0
@@ -38,15 +50,25 @@ placeholder
 # this line lets us build an RPM directly from a git tarball
 [ -e ./configure ] || ./autogen.sh
 
+# fix problems when buildsystem time is out of sync. ./configure will
+# fail if newly created files are older than the packaged files.
+# this should normally be a no-op on proper buildsystems.
+touch configure
+find . -type f -newer configure -print0 | xargs -r0 touch
+
 %configure
-make -e %{?_smp_mflags} 
+make -e %{?_smp_mflags}
 
 
 %install
+# Fedora Packaging guidelines
 rm -rf $RPM_BUILD_ROOT
+# SUSE Packaging rpmlint
+mkdir $RPM_BUILD_ROOT
+
 make install DESTDIR=%{buildroot} INSTALL="%{__install} -p"
 
- 
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
