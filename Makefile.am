@@ -18,4 +18,4 @@ cli_PYTHON = \
 	ft-cli-plugin/buildpkg_cmd.py
 
 REPLACE_VARS_ON_INSTALL= \
-	$(pkgpythondir)/__init__.py
+	firmware_extract/__init__.py

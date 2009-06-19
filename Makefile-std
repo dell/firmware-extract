@@ -34,15 +34,16 @@ ChangeLog:
 AUTHORS:
 	(GIT_DIR=$(top_srcdir)/.git git log | grep ^Author | sort |uniq > .authors.tmp && mv .authors.tmp AUTHORS; rm -f .authors.tmp) || (touch AUTHORS; echo 'git directory not found: installing possibly empty AUTHORS.' >&2)
 
-install-data-hook:
+all-am:
 	for i in $(REPLACE_VARS_ON_INSTALL); do      \
-	    file=$(DESTDIR)/$$i                     ;\
+	    file=$$i ;\
 	    perl -p -i -e 's|^__VERSION__\s*=.*|__VERSION__="$(RELEASE_VERSION)"|' $$file ;\
 	    perl -p -i -e 's|^PACKAGE\s*=.*|PACKAGE="$(PACKAGE)"|' $$file        ;\
 	    perl -p -i -e 's|^LOCALEDIR\s*=.*|LOCALEDIR="$(localedir)"|' $$file        ;\
 	    perl -p -i -e 's|^LIBDIR\s*=.*|LIBDIR="$(libdir)"|' $$file        ;\
 	    perl -p -i -e 's|^LIBEXECDIR\s*=.*|LIBEXECDIR="$(libexecdir)"|' $$file        ;\
 	    perl -p -i -e 's|^DATADIR\s*=.*|DATADIR="$(datadir)"|' $$file        ;\
+	    perl -p -i -e 's|^SHAREDSTATEDIR\s*=.*|SHAREDSTATEDIR="$(sharedstatedir)"|' $$file        ;\
 	    perl -p -i -e 's|^SYSCONFDIR\s*=.*|SYSCONFDIR="$(sysconfdir)"|' $$file        ;\
 	    perl -p -i -e 's|^PYTHONDIR\s*=.*|PYTHONDIR="$(pythondir)"|' $$file           ;\
 	    perl -p -i -e 's|^PKGPYTHONDIR\s*=.*|PKGPYTHONDIR="$(pkgpythondir)"|' $$file  ;\
@@ -52,23 +53,10 @@ install-data-hook:
 	    perl -p -i -e 's|^PKGLIBEXECDIR\s*=.*|PKGLIBEXECDIR="$(pkglibexecdir)"|' $$file        ;\
 	done
 
-install-exec-hook:
-	for i in $(REPLACE_VARS_ON_INSTALL); do      \
-	    file=$(DESTDIR)/$$i                     ;\
-	    perl -p -i -e 's|^__VERSION__\s*=.*|__VERSION__="$(RELEASE_VERSION)"|' $$file ;\
-	    perl -p -i -e 's|^PACKAGE\s*=.*|PACKAGE="$(PACKAGE)"|' $$file        ;\
-	    perl -p -i -e 's|^LOCALEDIR\s*=.*|LOCALEDIR="$(localedir)"|' $$file        ;\
-	    perl -p -i -e 's|^LIBDIR\s*=.*|LIBDIR="$(libdir)"|' $$file        ;\
-	    perl -p -i -e 's|^LIBEXECDIR\s*=.*|LIBEXECDIR="$(libexecdir)"|' $$file        ;\
-	    perl -p -i -e 's|^DATADIR\s*=.*|DATADIR="$(datadir)"|' $$file        ;\
-	    perl -p -i -e 's|^SYSCONFDIR\s*=.*|SYSCONFDIR="$(sysconfdir)"|' $$file        ;\
-	    perl -p -i -e 's|^PYTHONDIR\s*=.*|PYTHONDIR="$(pythondir)"|' $$file           ;\
-	    perl -p -i -e 's|^PKGPYTHONDIR\s*=.*|PKGPYTHONDIR="$(pkgpythondir)"|' $$file  ;\
-	    perl -p -i -e 's|^PKGDATADIR\s*=.*|PKGDATADIR="$(pkgdatadir)"|' $$file        ;\
-	    perl -p -i -e 's|^PKGCONFDIR\s*=.*|PKGCONFDIR="$(pkgconfdir)"|' $$file        ;\
-	    perl -p -i -e 's|^PKGGLADEDIR\s*=.*|PKGGLADEDIR="$(pkgdatadir)"|' $$file        ;\
-	    perl -p -i -e 's|^PKGLIBEXECDIR\s*=.*|PKGLIBEXECDIR="$(pkglibexecdir)"|' $$file        ;\
-	done
+install-data-hook:
+	mkdir -p $(DESTDIR)/$(sharedstatedir)/firmware-extract
+	mkdir -p $(DESTDIR)/$(sharedstatedir)/firmware-extract/extract
+
 
 .PHONY: upload_buildservice
 upload_buildservice: dist

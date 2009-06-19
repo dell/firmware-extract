@@ -1,4 +1,3 @@
-#!/usr/bin/python -t
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -121,7 +120,7 @@ class ExtractCommand(ftcommands.YumCommand):
         if base.opts.extract_topdir is not None:
             conf.extract_topdir = os.path.realpath(os.path.expanduser(base.opts.extract_topdir))
         if getattr(conf, "extract_topdir", None) is None:
-            conf.extract_topdir = os.path.join(firmwaretools.DATADIR, "firmware", "extract")
+            conf.extract_topdir = os.path.join(firmwaretools.SHAREDSTATEDIR, "firmware-extract", "extract")
 
         if base.opts.db_path is not None:
             conf.db_path = os.path.realpath(os.path.expanduser(base.opts.db_path))

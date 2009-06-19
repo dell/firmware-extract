@@ -12,11 +12,10 @@
 Name:           firmware-extract
 Version:        %{release_version}
 Release:        %{rpm_release}%{?dist}
-Summary:        firmware-tools plugin to add firmware extraction from vendor binaries
+Summary:        A firmware-tools plugin to add firmware extraction from vendor binaries
 
 Group:          Applications/System
-# License is actually GPL/OSL dual license (GPL Compatible), but rpmlint complains
-License:        GPL style
+License:        GPLv2+ and OSL 2.1
 URL:            http://linux.dell.com/libsmbios/download/
 Source0:        http://linux.dell.com/libsmbios/download/%{name}/%{name}-%{version}/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -39,8 +38,7 @@ Requires: firmware-tools >= 0:2.0
 Requires: python-sqlite2, python-sqlobject
 
 %description
-placeholder
-
+A firmware-tools plugin which adds the --extract mode to firmwaretool.
 
 %prep
 %setup -q
@@ -78,10 +76,15 @@ rm -rf $RPM_BUILD_ROOT
 %doc COPYING-GPL COPYING-OSL README
 %{python_sitelib}/*
 %{_datadir}/firmware-tools/plugins/*
-%{_sysconfdir}/firmware/firmware.d/*.conf
+%config(noreplace) %{_sysconfdir}/firmware/firmware.d/*.conf
+%dir %{_sharedstatedir}/%{name}/
+%dir %{_sharedstatedir}/%{name}/extract/
 #%attr(0755,root,root) %{_bindir}/*
 
 
 %changelog
+* Fri Jun 19 2009 Matt Domsch <Matt_Domsch@dell.com> - 2.0.7-1
+- Move runtime data to /var/lib/firmware-extract/
+
 * Mon Mar 12 2007 Michael E Brown <michael_e_brown at dell.com> - 1.2.0-1
 - Fedora-compliant packaging changes.
