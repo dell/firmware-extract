@@ -80,6 +80,6 @@ pkgpythondir=\${pythondir}/firmware_extract
 pkgpyexecdir=\${pyexecdir}/firmware_extract
 
 # generate files and exit
-AC_CONFIG_FILES([ Makefile pkg/${PACKAGE_NAME}.spec ])
+AC_CONFIG_FILES([ Makefile pkg/${PACKAGE_NAME}.spec firmware_extract/__init__.py ])
 AC_OUTPUT
 
