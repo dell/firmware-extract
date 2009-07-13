@@ -77,8 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/*
 %{_datadir}/firmware-tools/plugins/*
 %config(noreplace) %{_sysconfdir}/firmware/firmware.d/*.conf
-%dir %{_sharedstatedir}/%{name}/
-%dir %{_sharedstatedir}/%{name}/extract/
+%dir %{_localstatedir}/lib/%{name}/
+%dir %{_localstatedir}/lib/%{name}/extract/
 #%attr(0755,root,root) %{_bindir}/*
 
 

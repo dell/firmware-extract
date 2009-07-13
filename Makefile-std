@@ -35,8 +35,8 @@ AUTHORS:
 	(GIT_DIR=$(top_srcdir)/.git git log | grep ^Author | sort |uniq > .authors.tmp && mv .authors.tmp AUTHORS; rm -f .authors.tmp) || (touch AUTHORS; echo 'git directory not found: installing possibly empty AUTHORS.' >&2)
 
 install-data-hook:
-	mkdir -p $(DESTDIR)/$(sharedstatedir)/firmware-extract
-	mkdir -p $(DESTDIR)/$(sharedstatedir)/firmware-extract/extract
+	mkdir -p $(DESTDIR)/$(localstatedir)/lib/firmware-extract
+	mkdir -p $(DESTDIR)/$(localstatedir)/lib/firmware-extract/extract
 
 
 .PHONY: upload_buildservice
