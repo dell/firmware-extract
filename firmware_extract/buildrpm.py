@@ -93,6 +93,9 @@ def makeRpm(statusObj, output_topdir, logger, forceRebuild=False):
     except OSError: # dir exists
         pass
 
+    # need to be able to replace tar directory as it may not match
+    packageIni.set("package", "tar_dir", os.path.basename(statusObj.pkgDir))
+
     inp = open(os.path.join(statusObj.pkgDir, "rpm", "package.spec.in"), "r")
     out = open(os.path.join(statusObj.pkgDir, "rpm", "package.spec"), "w+")
     for line in inp.readlines():
