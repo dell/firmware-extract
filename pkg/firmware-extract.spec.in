@@ -1,10 +1,10 @@
 %define major @RELEASE_MAJOR@
 %define minor @RELEASE_MINOR@
-%define sub @RELEASE_SUBLEVEL@
-%define extralevel @RELEASE_RPM_EXTRALEVEL@
+%define sub @RELEASE_MICRO@
+%define extra @RELEASE_RPM_EXTRA@
 %define rpm_release 1
 %define release_name firmware-extract
-%define release_version %{major}.%{minor}.%{sub}%{extralevel}
+%define release_version %{major}.%{minor}.%{sub}%{extra}
 
 # per fedora python packaging guidelines
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
