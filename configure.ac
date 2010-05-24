@@ -6,7 +6,7 @@
 # change version here.
 m4_define([release_major_version], [2])
 m4_define([release_minor_version], [0])
-m4_define([release_micro_version], [11])
+m4_define([release_micro_version], [12])
 # if you define any "extra" version info, include a leading dot (".")
 m4_define([release_extra_version], [])
 
@@ -15,7 +15,7 @@ AC_INIT([firmware-extract],
 
 AC_PREREQ(2.61)
 AC_CONFIG_AUX_DIR([pkg])
-AM_INIT_AUTOMAKE([1.10 subdir-objects tar-ustar dist-bzip2 dist-lzma no-define])
+AM_INIT_AUTOMAKE([1.10 subdir-objects tar-ustar dist-bzip2 dist-lzma])
 
 # Checks for programs.
 AC_PROG_INSTALL

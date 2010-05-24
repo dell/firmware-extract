@@ -19,8 +19,9 @@ cli_PYTHON = \
 	ft-cli-plugin/buildpkg_cmd.py
 
 
-__VERSION__=$(VERSION)
+__VERSION__=$(PACKAGE_VERSION)
 REPLACE_VARS+= __VERSION__
+export __VERSION__
 EXTRA_DIST += firmware_extract/__init__.py
 DISTCLEANFILES +=   firmware_extract/generated/__init__.py
 firmware_extract/generated/__init__.py: firmware_extract/__init__.py configure Makefile config.status
