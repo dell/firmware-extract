@@ -6,7 +6,7 @@
 # change version here.
 m4_define([release_major_version], [2])
 m4_define([release_minor_version], [0])
-m4_define([release_micro_version], [10])
+m4_define([release_micro_version], [11])
 # if you define any "extra" version info, include a leading dot (".")
 m4_define([release_extra_version], [])
 
