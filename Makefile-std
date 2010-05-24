@@ -2,10 +2,7 @@
 #  This is a template of all of the 'Standard' stuff that we use in all our
 #  projects.
 
-AUTOMAKE_OPTIONS = subdir-objects
-SUBDIRS =
-
-CLEANFILES=$(RELEASE_NAME)-*.tar.gz $(RELEASE_NAME)-*.tar.bz2 $(RELEASE_NAME)-*.rpm _buildtemp version
+CLEANFILES=$(PACKAGE_NAME)-*.tar.gz $(PACKAGE_NAME)-*.tar.bz2 $(PACKAGE_NAME)-*.rpm _buildtemp version
 DISTCLEANFILES=*~
 
 EXTRA_DIST =
@@ -13,18 +10,17 @@ EXTRA_PROGRAMS=
 
 CLEANFILES += $(EXTRA_PROGRAMS)
 CLEANFILES += *.pyc */*.pyc */*/*.pyc */*/*/*.pyc
-CLEANFILES += pkg/$(PACKAGE).spec
+DISTCLEANFILES += pkg/$(PACKAGE).spec
 
-dist: ChangeLog AUTHORS
-ChangeLog:
-	(GIT_DIR=$(top_srcdir)/.git git log > .changelog.tmp && mv .changelog.tmp ChangeLog; rm -f .changelog.tmp) || (touch ChangeLog; echo 'git directory not found: installing possibly empty changelog.' >&2)
+clean-local:
+	-test -z "$(CLEANFILES)" || rm -rf $(CLEANFILES)
 
-AUTHORS:
-	(GIT_DIR=$(top_srcdir)/.git git log | grep ^Author | sort |uniq > .authors.tmp && mv .authors.tmp AUTHORS; rm -f .authors.tmp) || (touch AUTHORS; echo 'git directory not found: installing possibly empty AUTHORS.' >&2)
+distclean-local:
+	-test -z "$(DISTCLEANFILES)" || rm -rf $(DISTCLEANFILES)
 
-install-data-hook:
-	mkdir -p $(DESTDIR)/$(localstatedir)/lib/firmware-extract
-	mkdir -p $(DESTDIR)/$(localstatedir)/lib/firmware-extract/extract
+.PHONY: git-tag
+git-tag:
+	git tag -u libsmbios -m "tag for official release: $(PACKAGE_STRING)" v$(PACKAGE_VERSION)
 
 .PHONY: get-version
 get-version:
@@ -32,7 +28,33 @@ get-version:
 	@echo 'PACKAGE_VERSION="$(PACKAGE_VERSION)"'
 	@echo 'PACKAGE="$(PACKAGE)"'
 
+ChangeLog:
+	(GIT_DIR=$(top_srcdir)/.git git log > .changelog.tmp && mv .changelog.tmp ChangeLog; rm -f .changelog.tmp) || (touch ChangeLog; echo 'git directory not found: installing possibly empty changelog.' >&2)
 
+AUTHORS:
+	(GIT_DIR=$(top_srcdir)/.git git log | grep ^Author | sort |uniq > .authors.tmp && mv .authors.tmp AUTHORS; rm -f .authors.tmp) || (touch AUTHORS; echo 'git directory not found: installing possibly empty AUTHORS.' >&2)
+
+REPLACE_VARS=GETTEXT_PACKAGE PACKAGE_VERSION PACKAGE localedir libdir libexecdir datadir sysconfdir pythondir pkgpythondir pkgdatadir pkgconfdir pkggladedir pkglibexecdir
+
+DATA_HOOK_REPLACE=
+install-data-hook:
+	for i in $(DATA_HOOK_REPLACE); do      \
+	    file=$(DESTDIR)/$$i                     ;\
+	    for var in $(REPLACE_VARS)	;\
+	    do	\
+	        perl -p -i -e "s|^$$var\s*=.*|$$var=\"$${!var}\"|"  $$file;\
+	    done	;\
+	done
+
+EXEC_HOOK_REPLACE=
+install-exec-hook:
+	for i in $(EXEC_HOOK_REPLACE); do      \
+	    file=$(DESTDIR)/$$i                     ;\
+	    for var in $(REPLACE_VARS)	;\
+	    do	\
+	        perl -p -i -e "s|^$$var\s*=.*|$$var=\"$${!var}\"|"  $$file;\
+	    done	;\
+	done
 
 TOPDIR := $(shell cd $(top_builddir);pwd)
 BUILDDIR = $(TOPDIR)/_rpmbuild
@@ -42,20 +64,22 @@ SPECFILE= $(TOPDIR)/pkg/$(PACKAGE_NAME).spec
 SPECDIR = $(TOPDIR)/pkg
 SRCRPMDIR = $(TOPDIR)
 
-RPM_DEFINES = --define "_topdir $(TOPDIR)" \
+AM_RPM_DEFINES = --define "_topdir $(TOPDIR)" \
 		--define "_builddir $(BUILDDIR)" \
 		--define "_rpmdir $(RPMDIR)" \
 		--define "_sourcedir $(SOURCEDIR)" \
 		--define "_specdir $(SPECDIR)" \
-		--define "_srcrpmdir $(SRCRPMDIR)"
+		--define "_srcrpmdir $(SRCRPMDIR)" \
+		$(RPM_DEFINES)
 
 .PHONY: rpm srpm
 rpm: pkg/$(PACKAGE_NAME).spec dist
 	mkdir -p $(BUILDDIR)
-	rpmbuild $(RPM_DEFINES) -ba --nodeps $(SPECFILE)
+	rpmbuild $(AM_RPM_DEFINES) -ba --nodeps $(SPECFILE)
 	rm -rf $(BUILDDIR)
 
 srpm: pkg/$(PACKAGE_NAME).spec dist
 	mkdir -p $(BUILDDIR)
-	rpmbuild $(RPM_DEFINES) -bs --nodeps $(SPECFILE)
+	rpmbuild $(AM_RPM_DEFINES) -bs --nodeps $(SPECFILE)
 	rm -rf $(BUILDDIR)
+
