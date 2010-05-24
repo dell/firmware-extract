@@ -21,13 +21,9 @@ cli_PYTHON = \
 
 __VERSION__=$(PACKAGE_VERSION)
 REPLACE_VARS+= __VERSION__
-export __VERSION__
 EXTRA_DIST += firmware_extract/__init__.py
 DISTCLEANFILES +=   firmware_extract/generated/__init__.py
 firmware_extract/generated/__init__.py: firmware_extract/__init__.py configure Makefile config.status
 	mkdir -p $$(dirname $@) ||:
 	cp $< $@
-	for var in $(REPLACE_VARS)	;\
-	do	\
-		perl -p -i -e "s|^$$var\s*=.*|$$var=\"$${!var}\"|"  $@;\
-	done
+	$(call replace_vars_in_file,$@)
