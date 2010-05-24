@@ -2,76 +2,84 @@
 #  This is a template of all of the 'Standard' stuff that we use in all our
 #  projects.
 
-AUTOMAKE_OPTIONS = subdir-objects
-SUBDIRS = 
-
-CLEANFILES=$(RELEASE_NAME)-*.tar.gz $(RELEASE_NAME)-*.tar.bz2 $(RELEASE_NAME)-*.rpm _buildtemp version
-DISTCLEANFILES=*~ 
+CLEANFILES=$(PACKAGE_NAME)-*.tar.gz $(PACKAGE_NAME)-*.tar.bz2 $(PACKAGE_NAME)-*.rpm _buildtemp version
+DISTCLEANFILES=*~
 
 EXTRA_DIST =
 EXTRA_PROGRAMS=
 
 CLEANFILES += $(EXTRA_PROGRAMS)
 CLEANFILES += *.pyc */*.pyc */*/*.pyc */*/*/*.pyc
-CLEANFILES += pkg/$(PACKAGE).spec
+DISTCLEANFILES += pkg/$(PACKAGE).spec
 
-dist: ChangeLog AUTHORS
+clean-local:
+	-test -z "$(CLEANFILES)" || rm -rf $(CLEANFILES)
+
+distclean-local:
+	-test -z "$(DISTCLEANFILES)" || rm -rf $(DISTCLEANFILES)
+
+.PHONY: git-tag
+git-tag:
+	git tag -u libsmbios -m "tag for official release: $(PACKAGE_STRING)" v$(PACKAGE_VERSION)
+
+.PHONY: get-version
+get-version:
+	@echo 'PACKAGE_STRING="$(PACKAGE_STRING)"'
+	@echo 'PACKAGE_VERSION="$(PACKAGE_VERSION)"'
+	@echo 'PACKAGE="$(PACKAGE)"'
+
 ChangeLog:
-	(GIT_DIR=$(top_srcdir)/.git git-log > .changelog.tmp && mv .changelog.tmp ChangeLog; rm -f .changelog.tmp) || (touch ChangeLog; echo 'git directory not found: installing possibly empty changelog.' >&2)
+	(GIT_DIR=$(top_srcdir)/.git git log > .changelog.tmp && mv .changelog.tmp ChangeLog; rm -f .changelog.tmp) || (touch ChangeLog; echo 'git directory not found: installing possibly empty changelog.' >&2)
 
 AUTHORS:
-	(GIT_DIR=$(top_srcdir)/.git git-log | grep ^Author | sort |uniq > .authors.tmp && mv .authors.tmp AUTHORS; rm -f .authors.tmp) || (touch AUTHORS; echo 'git directory not found: installing possibly empty AUTHORS.' >&2)
+	(GIT_DIR=$(top_srcdir)/.git git log | grep ^Author | sort |uniq > .authors.tmp && mv .authors.tmp AUTHORS; rm -f .authors.tmp) || (touch AUTHORS; echo 'git directory not found: installing possibly empty AUTHORS.' >&2)
 
+REPLACE_VARS=GETTEXT_PACKAGE PACKAGE_VERSION PACKAGE localedir libdir libexecdir datadir sysconfdir pythondir pkgpythondir pkgdatadir pkgconfdir pkggladedir pkglibexecdir
+
+DATA_HOOK_REPLACE=
 install-data-hook:
-	for i in $(REPLACE_VARS_ON_INSTALL); do      \
+	for i in $(DATA_HOOK_REPLACE); do      \
 	    file=$(DESTDIR)/$$i                     ;\
-	    perl -p -i -e 's|^__VERSION__\s*=.*|__VERSION__="$(RELEASE_VERSION)"|' $$file ;\
-	    perl -p -i -e 's|^LIBDIR\s*=.*|LIBDIR="$(libdir)"|' $$file        ;\
-	    perl -p -i -e 's|^DATADIR\s*=.*|DATADIR="$(datadir)"|' $$file        ;\
-	    perl -p -i -e 's|^SYSCONFDIR\s*=.*|SYSCONFDIR="$(sysconfdir)"|' $$file        ;\
-	    perl -p -i -e 's|^PYTHONDIR\s*=.*|PYTHONDIR="$(pythondir)"|' $$file           ;\
-	    perl -p -i -e 's|^PKGPYTHONDIR\s*=.*|PKGPYTHONDIR="$(pkgpythondir)"|' $$file  ;\
-	    perl -p -i -e 's|^PKGDATADIR\s*=.*|PKGDATADIR="$(pkgdatadir)"|' $$file        ;\
-	    perl -p -i -e 's|^PKGCONFDIR\s*=.*|PKGCONFDIR="$(pkgconfdir)/"|' $$file        ;\
-	    perl -p -i -e 's|^PKGGLADEDIR\s*=.*|PKGGLADEDIR="$(pkgdatadir)"|' $$file        ;\
+	    for var in $(REPLACE_VARS)	;\
+	    do	\
+	        perl -p -i -e "s|^$$var\s*=.*|$$var=\"$${!var}\"|"  $$file;\
+	    done	;\
 	done
 
+EXEC_HOOK_REPLACE=
 install-exec-hook:
-	for i in $(REPLACE_VARS_ON_INSTALL); do      \
+	for i in $(EXEC_HOOK_REPLACE); do      \
 	    file=$(DESTDIR)/$$i                     ;\
-	    perl -p -i -e 's|^__VERSION__\s*=.*|__VERSION__="$(RELEASE_VERSION)"|' $$file ;\
-	    perl -p -i -e 's|^LIBDIR\s*=.*|LIBDIR="$(libdir)"|' $$file        ;\
-	    perl -p -i -e 's|^LIBEXECDIR\s*=.*|LIBEXECDIR="$(libexecdir)"|' $$file        ;\
-	    perl -p -i -e 's|^DATADIR\s*=.*|DATADIR="$(datadir)"|' $$file        ;\
-	    perl -p -i -e 's|^SYSCONFDIR\s*=.*|SYSCONFDIR="$(sysconfdir)"|' $$file        ;\
-	    perl -p -i -e 's|^PYTHONDIR\s*=.*|PYTHONDIR="$(pythondir)"|' $$file           ;\
-	    perl -p -i -e 's|^PKGPYTHONDIR\s*=.*|PKGPYTHONDIR="$(pkgpythondir)"|' $$file  ;\
-	    perl -p -i -e 's|^PKGDATADIR\s*=.*|PKGDATADIR="$(pkgdatadir)"|' $$file        ;\
-	    perl -p -i -e 's|^PKGCONFDIR\s*=.*|PKGCONFDIR="$(pkgconfdir)"|' $$file        ;\
-	    perl -p -i -e 's|^PKGGLADEDIR\s*=.*|PKGGLADEDIR="$(pkgdatadir)"|' $$file        ;\
+	    for var in $(REPLACE_VARS)	;\
+	    do	\
+	        perl -p -i -e "s|^$$var\s*=.*|$$var=\"$${!var}\"|"  $$file;\
+	    done	;\
 	done
 
 TOPDIR := $(shell cd $(top_builddir);pwd)
 BUILDDIR = $(TOPDIR)/_rpmbuild
 RPMDIR = $(TOPDIR)
 SOURCEDIR = $(TOPDIR)
+SPECFILE= $(TOPDIR)/pkg/$(PACKAGE_NAME).spec
 SPECDIR = $(TOPDIR)/pkg
 SRCRPMDIR = $(TOPDIR)
 
-RPM_DEFINES = --define "_topdir $(TOPDIR)" \
+AM_RPM_DEFINES = --define "_topdir $(TOPDIR)" \
 		--define "_builddir $(BUILDDIR)" \
 		--define "_rpmdir $(RPMDIR)" \
 		--define "_sourcedir $(SOURCEDIR)" \
 		--define "_specdir $(SPECDIR)" \
-		--define "_srcrpmdir $(SRCRPMDIR)"
+		--define "_srcrpmdir $(SRCRPMDIR)" \
+		$(RPM_DEFINES)
 
 .PHONY: rpm srpm
-rpm: dist
+rpm: pkg/$(PACKAGE_NAME).spec dist
 	mkdir -p $(BUILDDIR)
-	rpmbuild $(RPM_DEFINES) -ba --nodeps pkg/$(PACKAGE_NAME).spec
+	rpmbuild $(AM_RPM_DEFINES) -ba --nodeps $(SPECFILE)
 	rm -rf $(BUILDDIR)
 
-srpm: dist
+srpm: pkg/$(PACKAGE_NAME).spec dist
 	mkdir -p $(BUILDDIR)
-	rpmbuild $(RPM_DEFINES) -bs --nodeps pkg/$(PACKAGE_NAME).spec
+	rpmbuild $(AM_RPM_DEFINES) -bs --nodeps $(SPECFILE)
 	rm -rf $(BUILDDIR)
+
