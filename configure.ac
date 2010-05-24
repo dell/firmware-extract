@@ -2,21 +2,27 @@
 # vim:tw=0:et:ts=4:sw=4
 # Process this file with autoconf to produce a configure script.
 
-####################################
-# change version here.
-AC_INIT([firmware-extract],[2.0.5])
+##############################################################################
+#
+# The following variables define the libsmbios release version.
+#   This is the "marketing" version, or overall version of the project.
+#   This doesnt have anything in relation to the ABI versions of individual
+#   libraries, which are defined further below.
+#
+m4_define([release_major_version], [2])
+m4_define([release_minor_version], [0])
+m4_define([release_micro_version], [5])
+# if you define any "extra" version info, include a leading dot (".")
+m4_define([release_extra_version], [])
 
-temp_RELEASE_NAME=firmware-extract
-temp_RELEASE_MAJOR=2
-temp_RELEASE_MINOR=0
-temp_RELEASE_SUBLEVEL=5
-temp_RELEASE_EXTRALEVEL=
+AC_INIT([firmware-extract],
+          [release_major_version().release_minor_version().release_micro_version()release_extra_version()])
+
 ####################################
 
 AC_PREREQ(2.61)
 AC_CONFIG_AUX_DIR([pkg])
-AM_INIT_AUTOMAKE(1.9 tar-ustar no-define)
-AM_MAINTAINER_MODE
+AM_INIT_AUTOMAKE([1.10 subdir-objects tar-ustar dist-bzip2 dist-lzma no-define foreign])
 
 # Checks for programs.
 AC_PROG_INSTALL
@@ -24,51 +30,15 @@ AC_PROG_INSTALL
 # automake macros
 AM_PATH_PYTHON
 
-# Checks for header files.
-
-# Checks for typedefs, structures, and compiler characteristics.
-
-# Checks for library functions.
-
-# update 'real' variables from the temp variable names.
-# do this at the end of the file so that they A) are not overwitten by other
-# autoconf stuff, and B) so that user can override on cmdline
-for i in RELEASE_NAME RELEASE_MAJOR RELEASE_MINOR RELEASE_SUBLEVEL RELEASE_EXTRALEVEL
-do
-    varname=temp_$i
-    if test -z "${!i}"; then
-        eval $i=${!varname}; export $i
-    fi
-done
-
-if test -z "$RELEASE_RPM_EXTRALEVEL"; then
-    if test -z "$RELEASE_EXTRALEVEL"; then
-        RELEASE_RPM_EXTRALEVEL=%{nil}
-    else
-        RELEASE_RPM_EXTRALEVEL=$RELEASE_EXTRALEVEL
-    fi
+# versioning
+AC_SUBST([RELEASE_MAJOR], [release_major_version()])
+AC_SUBST([RELEASE_MINOR], [release_minor_version()])
+AC_SUBST([RELEASE_MICRO], [release_micro_version()])
+AC_SUBST([RELEASE_EXTRA], [release_extra_version()])
+AC_SUBST([RELEASE_RPM_EXTRA], [%{nil}])
+if test -n "$RELEASE_EXTRA"; then
+    RELEASE_RPM_EXTRA=$RELEASE_EXTRA
 fi
-
-PACKAGE=$RELEASE_NAME
-PACKAGE_VERSION=[`echo ${RELEASE_MAJOR}.${RELEASE_MINOR}.${RELEASE_SUBLEVEL}${RELEASE_EXTRALEVEL}`]
-PACKAGE_STRING=[`echo ${RELEASE_NAME} ${RELEASE_MAJOR}.${RELEASE_MINOR}.${RELEASE_SUBLEVEL}${RELEASE_EXTRALEVEL}`]
-VERSION=$PACKAGE_VERSION
-
-cat confdefs.h |
-    grep -v 'define PACKAGE_VERSION ' |
-    grep -v 'define PACKAGE_STRING '  > confdefs.new
-mv confdefs.new confdefs.h
-cat >>confdefs.h <<_ACEOF 
-#define PACKAGE_VERSION "$PACKAGE_VERSION"
-#define PACKAGE_STRING "$PACKAGE_STRING"
-_ACEOF
-
-AC_SUBST([RELEASE_NAME RELEASE_MAJOR RELEASE_MINOR RELEASE_SUBLEVEL RELEASE_EXTRALEVEL RELEASE_RPM_EXTRALEVEL])
-
-# this is used by the autobuilder hook to determine the version we built
-echo "PACKAGE_NAME='$PACKAGE_NAME'" > version
-echo "PACKAGE_VERSION='$PACKAGE_VERSION'" >> version
-echo "PACKAGE_STRING='$PACKAGE_STRING'" >> version
 
 # historical pkg oddity: package name cannot contain '-', so we have to fix it
 pkgpythondir=\${pythondir}/firmware_extract
