@@ -6,7 +6,7 @@
 # change version here.
 m4_define([release_major_version], [2])
 m4_define([release_minor_version], [0])
-m4_define([release_micro_version], [9])
+m4_define([release_micro_version], [10])
 # if you define any "extra" version info, include a leading dot (".")
 m4_define([release_extra_version], [])
 
@@ -46,6 +46,7 @@ pkgpythondir=\${pythondir}/firmware_extract
 pkgpyexecdir=\${pyexecdir}/firmware_extract
 
 # generate files and exit
-AC_CONFIG_FILES([ Makefile pkg/${PACKAGE_NAME}.spec firmware_extract/__init__.py ])
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([pkg/${PACKAGE_NAME}.spec])
 AC_OUTPUT
 
