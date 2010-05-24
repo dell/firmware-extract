@@ -40,6 +40,8 @@ def makeRpm(statusObj, output_topdir, logger, forceRebuild=False):
 
     safe_name = packageIni.get("package", "safe_name")
     ver = packageIni.get("package", "version")
+    if len(ver) == 0:
+        ver = "unknown"
     rel = getSpecRelease(spec)
     epoch = "0"
     if packageIni.has_option("package", "epoch"): 
