@@ -80,6 +80,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Wed Oct 6 2010 Michael Brown <Michael_E_Brown@dell.com> - 2.0.3-1
+- minor spec file updates per fedora package review
+
 * Fri Jun 19 2009 Matt Domsch <Matt_Domsch@dell.com> - 2.0.7-1
 - Move runtime data to /var/lib/firmware-extract/
 
