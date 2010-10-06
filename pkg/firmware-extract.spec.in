@@ -55,9 +55,9 @@ make -e %{?_smp_mflags}
 
 %install
 # Fedora Packaging guidelines
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 # SUSE Packaging rpmlint
-mkdir $RPM_BUILD_ROOT
+mkdir %{buildroot}
 
 make install DESTDIR=%{buildroot} INSTALL="%{__install} -p"
 
