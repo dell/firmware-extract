@@ -49,12 +49,6 @@ A firmware-tools plugin which adds the --extract mode to firmwaretool.
 # this line lets us build an RPM directly from a git tarball
 [ -e ./configure ] || ./autogen.sh
 
-# fix problems when buildsystem time is out of sync. ./configure will
-# fail if newly created files are older than the packaged files.
-# this should normally be a no-op on proper buildsystems.
-touch configure
-find . -type f -newer configure -print0 | xargs -r0 touch
-
 %configure
 make -e %{?_smp_mflags}
 
