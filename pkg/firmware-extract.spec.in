@@ -70,7 +70,7 @@ mkdir -p %{buildroot}/%{_localstatedir}/lib/%{name}/extract/
 
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 
 
 %files
