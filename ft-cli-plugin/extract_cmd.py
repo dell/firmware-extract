@@ -120,7 +120,7 @@ class ExtractCommand(ftcommands.YumCommand):
         if base.opts.extract_topdir is not None:
             conf.extract_topdir = os.path.realpath(os.path.expanduser(base.opts.extract_topdir))
         if getattr(conf, "extract_topdir", None) is None:
-            conf.extract_topdir = os.path.join(firmwaretools.SHAREDSTATEDIR, "firmware-extract", "extract")
+            raise plugins.PluginExit("Error: --outputdir or config.extract_topdir must be specified for extract.")
 
         if base.opts.db_path is not None:
             conf.db_path = os.path.realpath(os.path.expanduser(base.opts.db_path))
